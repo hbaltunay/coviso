@@ -39,20 +39,30 @@ class InfoVideo:
 
 class GetVideo:
 
-    def __init__(self, source_path: str) -> None:
+    def __init__(
+        self, source_path: str, start_time: int = 0, video_time: int = -1
+    ) -> None:
         """
         Args:
             source_path (str): The file path of the source file.
+            start_time (int): Video start time.
+            video_time (int): Video time.
         """
         self.source_path = source_path
         self.cap = cv2.VideoCapture(self.source_path)
+        self.fps = self.cap.get(cv2.CAP_PROP_FPS)
+        self.start_time = int(self.fps * start_time)
+        self.video_time = int(self.fps * video_time)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.start_time)
+        self.frame_num = 0
 
     def __iter__(self) -> Self:
         return self
 
     def __next__(self) -> Any | NDArray[Any]:
+        self.frame_num += 1
         ret, video_frame = self.cap.read()
-        if ret:
+        if ret and self.frame_num != self.video_time:
             return video_frame
         else:
             logger.info("The video is complete.")
@@ -66,22 +76,32 @@ class ProcessVideo:
         source_path: str | Path,
         target_path: str = "./result.mp4",
         save: bool = False,
+        start_time: int = 0,
+        video_time: int = -1,
     ) -> None:
         """
         Args:
             source_path (str): The file path of the source file.
             target_path (str): The path where the file will be saved.
             save (bool): Whether the file will be saved.
+            start_time (int): Video start time.
+            video_time (int): Video time.
         """
         self.source_path = str(source_path)
         self.target_path = target_path
         self.save = save
+        self.start_time = start_time
+        self.video_time = video_time
         self.out = None
         self.stopped = False
 
     def __enter__(self) -> Self:
         self.video_info = InfoVideo.get(source_path=self.source_path)
-        self.video_frames = GetVideo(source_path=self.source_path)
+        self.video_frames = GetVideo(
+            source_path=self.source_path,
+            start_time=self.start_time,
+            video_time=self.video_time,
+        )
         self.imgsz = (self.video_info.height, self.video_info.width)
 
         if self.save:
@@ -103,7 +123,9 @@ class ProcessVideo:
             self.out.release()
         cv2.destroyAllWindows()
 
-    def show(self, frame: NDArray[Any], winname: str = "Coviso"):
+    def show(self, frame: NDArray[Any], winname: str = "Coviso", delay: int = 1):
         cv2.imshow(winname, frame)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
+        if cv2.waitKey(delay) & 0xFF == ord("q"):
             self.stopped = True
+            if self.out:
+                self.out.release()
