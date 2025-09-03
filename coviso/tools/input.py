@@ -191,7 +191,7 @@ class VideoLineInput(AnyInput):
 
         self.line = self.line[-self.num:]
 
-        if event:
+        if event or flags:
             self.draw_lines(self.line)
 
         cv2.imshow("Coviso", self.processed_frame)
@@ -204,7 +204,7 @@ class VideoLineInput(AnyInput):
         else:
             self.frame = self.get_first_frame(source_path)
 
-        lines = cfg_dict.get("lines", None)
+        lines = cfg_dict.get("polys", None)
         if lines is not None:
             self.lines.update(lines)
             self.last_num = len(self.lines)

@@ -51,9 +51,9 @@ class GetVideo:
         self.source_path = source_path
         self.cap = cv2.VideoCapture(self.source_path)
         self.fps = self.cap.get(cv2.CAP_PROP_FPS)
-        self.start_time = int(self.fps * start_time)
-        self.video_time = int(self.fps * video_time)
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.start_time)
+        self.start_frame = int(self.fps * start_time)
+        self.total_frame = int(self.fps * video_time)
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame)
         self.frame_num = 0
 
     def __iter__(self) -> Self:
@@ -62,7 +62,7 @@ class GetVideo:
     def __next__(self) -> Any | NDArray[Any]:
         self.frame_num += 1
         ret, video_frame = self.cap.read()
-        if ret and self.frame_num != self.video_time:
+        if ret and self.frame_num != self.total_frame:
             return video_frame
         else:
             logger.info("The video is complete.")
@@ -102,6 +102,7 @@ class ProcessVideo:
             start_time=self.start_time,
             video_time=self.video_time,
         )
+        self.start_num = self.video_frames.start_frame
         self.imgsz = (self.video_info.height, self.video_info.width)
 
         if self.save:

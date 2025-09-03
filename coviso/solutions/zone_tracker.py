@@ -62,7 +62,7 @@ class ZoneTracker(Tracker):
         Returns:
             NDArray: The image of the processed video frame.
         """
-        xyxy = result[:, :4].numpy().astype(int)
+        xyxy = result[:, :4].astype(int)
         for x1, y1, x2, y2 in xyxy:
             cv2.rectangle(frame, (x1, y1), (x2, y2), color=(0, 0, 0), thickness=1)
             x, y, _, h = xyxy2xywh(np.array([x1, y1, x2, y2]))
@@ -112,7 +112,7 @@ class ZoneTracker(Tracker):
             result (Any): The output results from the model.
         """
         for res in result:
-            x, y, _, h = xyxy2xywh(res[:4].numpy())
+            x, y, _, h = xyxy2xywh(res[:4])
             statu = int(self.mask[min(int(y + (h / 2)) - 1, self.size[0]), int(x)])
 
             if not (statu in self.filled_polys) and statu > 0:

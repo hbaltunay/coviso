@@ -23,7 +23,14 @@ class LineTracker(Tracker):
     def line_shift(
         self, line: Any, size: tuple[int, int], factor: int = 25
     ) -> dict[str, list[int]]:
-
+        """
+        Args:
+            line (Any): Coordinates of the specified lines.
+            size (tuple): The size of the video frame.
+            factor (int): The width factor of the line.
+        Returns:
+            dict: Dictionary containing line information.
+        """
         (sx, sy), (fx, fy) = line[1], line[2]
         degree = get_degree(sx, sy, fx, fy)
         radi = np.radians(degree)
@@ -97,7 +104,7 @@ class LineTracker(Tracker):
             NDArray: The image of the processed video frame.
         """
         for res in result:
-            x1, y1, x2, y2 = res[:4].numpy().astype(int)
+            x1, y1, x2, y2 = res[:4].astype(int)
             cv2.rectangle(
                 img=frame, pt1=(x1, y1), pt2=(x2, y2), color=(0, 0, 0), thickness=1
             )
@@ -110,8 +117,8 @@ class LineTracker(Tracker):
                 thickness=-1,
             )
 
-            track_id = str(res[4].numpy().astype(np.int32))
-            cls = str(res[6].numpy().astype(np.int32))
+            track_id = str(res[4].astype(np.int32))
+            cls = str(res[6].astype(np.int32))
 
             cv2.putText(
                 img=frame,
@@ -206,8 +213,8 @@ class LineTracker(Tracker):
             result (Any): The output results from the model.
         """
         for res in result:
-            track_id = str(res[4].numpy().astype(np.int32))
-            x, y = set_base_detect(xyxy=res[:4].numpy(), size=self.size)
+            track_id = str(res[4].astype(np.int32))
+            x, y = set_base_detect(xyxy=res[:4], size=self.size)
             statu = int(self.mask[y, x])
             self.check_line_statu(track_id=track_id, statu=statu)
 
