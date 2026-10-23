@@ -15,13 +15,13 @@ class Task;
 class Agent {
 private:
     std::string name_;
-    int id_;
+    int agentId_;
     AgentInfo agentInfo_;
     Task* task_;
 
     
 public:
-    Agent(std::string name, int id, Task* task);
+    Agent(std::string name, int agentId, Task* task);
 
     Detection run();
 };

@@ -1,10 +1,9 @@
-#include <iostream>
-
 #include "cv/solution/zone.hpp"
+#include "cv/solution/draw.hpp"
 
 
 ZoneTracker::ZoneTracker(std::filesystem::path configPath, std::string strategy)
-    : BaseSolution(configPath), strategy_(strategy) {
+    : BaseSolution(configPath), strategy_(strategy), state_(imgsz_){
 
     if (strategy_ == "tracked") {
         activeStrategy = &ZoneTracker::trackedStrategy;
@@ -16,16 +15,10 @@ ZoneTracker::ZoneTracker(std::filesystem::path configPath, std::string strategy)
 ZoneTracker::~ZoneTracker() {}
 
 bool ZoneTracker::init() {
-    Config config(configPath_);
-    if (!config.load()) return false;
-
-    name_ = config.get_or<std::string>("name", "");
+    name_ = config_.get_or<std::string>("name", "");
     if (name_.empty()) return false;
 
-    imgsz_ = config.get_or<cv::Size>("imgsz", cv::Size(0, 0));
-    if (imgsz_.area() <= 0) return false;
-
-    zones_ = config.get_or<CoordinateData>("points", {});
+    zones_ = config_.get_or<CoordinateData>("points", {});
     if (zones_.empty()) return false;
 
     return createMask();
@@ -105,7 +98,7 @@ void ZoneTracker::trackedStrategy(std::vector<Detection> detections) {
     for (Detection det : detections) {
         const int x = static_cast<int>(det.bbox.x);
         const int y = static_cast<int>(det.bbox.y);
-        int trackId = det.id;
+        int trackId = det.trackId;
 
         if (x < 0 || x >= mask_.cols || y < 0 || y >= mask_.rows) [[unlikely]] {
             continue;
@@ -122,15 +115,11 @@ void ZoneTracker::trackedStrategy(std::vector<Detection> detections) {
 
 void ZoneTracker::process(cv::Mat& image, std::vector<Detection> detections) {
     (this->*activeStrategy)(detections);
-    draw(image, detections);
+    draw(image);
 }
 
-void ZoneTracker::draw(cv::Mat& image, std::vector<Detection> detections) {
-    for (const auto& [id, zoneInfo] : state_.zoneInfos_) {
-        if (id == 0) continue;
-        cv::Scalar color = cv::Scalar(id, id, id);
-        cv::fillPoly(image, zoneInfo.zone, cv::Scalar(id));
-    }
+void ZoneTracker::draw(cv::Mat& image) {
+    drawZone(image, state_.infos());
 }
 
 std::vector<std::string> ZoneTracker::getStateInfoStr() {

@@ -2,10 +2,10 @@
 #include "cv/sim/tasks.hpp"
 
 
-Agent::Agent(std::string name, int id, Task* task) 
-    : name_(name), id_(id), task_(task) {
+Agent::Agent(std::string name, int agentId, Task* task) 
+    : name_(name), agentId_(agentId), task_(task) {
     agentInfo_.name = name_;
-    agentInfo_.detection.id = id_;
+    agentInfo_.detection.trackId = agentId_;
 }
 
 

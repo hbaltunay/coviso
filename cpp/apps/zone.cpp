@@ -31,24 +31,29 @@ int main() {
 
     sim.addTaskConfig("Test", configPath);
 
-    ZoneTracker tracker(configPath, "tracked");
+    ZoneTracker tracker(configPath, "plain");
     tracker.init();
 
     std::string windowName = "Simulator";
     cv::namedWindow(windowName, cv::WINDOW_GUI_NORMAL);
     cv::setMouseCallback(windowName, onMouse, &sim);
-    cv::resizeWindow(windowName, 800, 600); 
+    cv::resizeWindow(windowName, 800, 600);
+
+    cv::Mat org_canvas = cv::imread("canvas.jpg");
+    cv::Mat canvas;
+    cv::resize(org_canvas, canvas, cv::Size(1280, 720), 0, 0, cv::INTER_LINEAR);
 
     while (true) {
         cv::Mat display_canvas;
-        sim.canvas_.copyTo(display_canvas);
+        
+        canvas.copyTo(display_canvas);
 
         for (const auto& [name, task]: sim.tasks_) {
             std::vector<Detection> detectionList = task->generate();
 
             tracker.process(display_canvas, detectionList);
 
-            sim.draw(display_canvas, detectionList, tracker.getZoneNum());
+            sim.draw(display_canvas, detectionList);
             sim.writeState(display_canvas, tracker.getStateInfoStr());
         }
         

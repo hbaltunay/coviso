@@ -16,6 +16,8 @@ namespace cv {
 
 class Config {
 public:
+    Config() = default;
+
     explicit Config(const std::filesystem::path& configPath);
 
     [[nodiscard]] bool load();

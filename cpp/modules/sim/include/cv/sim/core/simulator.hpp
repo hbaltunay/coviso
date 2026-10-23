@@ -24,7 +24,7 @@ public:
     bool addTaskConfig(std::string name, std::filesystem::path configPath);
 
     void run();
-    void draw(cv::Mat& image, std::vector<Detection> detections, int color);
+    void draw(cv::Mat& image, std::vector<Detection> detections);
     void writeState(cv::Mat& image, std::vector<std::string> strSummary);
 
     cv::Mat& getCanvas() { return canvas_; }

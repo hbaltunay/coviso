@@ -1,22 +1,17 @@
 #include "cv/solution/line.hpp"
+#include "cv/solution/draw.hpp"
 
 
 LineTracker::LineTracker(std::filesystem::path configPath)
-    : BaseSolution(configPath) {}
+    : BaseSolution(configPath), state_(imgsz_) {}
 
 LineTracker::~LineTracker() {}
 
 bool LineTracker::init() {
-    Config config(configPath_);
-    if (!config.load()) return false;
-
-    name_ = config.get_or<std::string>("name", "");
+    name_ = config_.get_or<std::string>("name", "");
     if (name_.empty()) return false;
 
-    imgsz_ = config.get_or<cv::Size>("imgsz", cv::Size(0, 0));
-    if (imgsz_.area() <= 0) return false;
-
-    lines_ = config.get_or<CoordinateData>("points", {});
+    lines_ = config_.get_or<CoordinateData>("points", {});
     if (lines_.empty()) return false;
 
     return createMask();
@@ -143,7 +138,7 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
     for (Detection& det : detections) {
         const int x = static_cast<int>(det.bbox.x);
         const int y = static_cast<int>(det.bbox.y);
-        int trackId = det.id;
+        int trackId = det.trackId;
 
         if (x < 0 || x >= mask_.cols || y < 0 || y >= mask_.rows) [[unlikely]] {
             continue;
@@ -178,14 +173,11 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
     }
 
     state_.update();
-    draw(image, detections);
+    draw(image);
 }
 
-void LineTracker::draw(cv::Mat& image, std::vector<Detection> detections) {
-    for (const auto& [id, lineInfo] : state_.lineInfos_) {
-        if (id == 0) continue;
-        cv::fillPoly(image, lineInfo.line, cv::Scalar(id));
-    }
+void LineTracker::draw(cv::Mat& image) {
+    drawLine(image, state_.infos());
 }
 
 std::vector<std::string> LineTracker::getStateInfoStr() {

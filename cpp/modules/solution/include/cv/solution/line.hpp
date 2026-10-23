@@ -9,7 +9,6 @@
 
 class LineTracker : public BaseSolution {
 private:
-    cv::Size imgsz_;
     cv::Mat mask_;
     CoordinateData lines_;
     int lineNum_;
@@ -24,7 +23,7 @@ public:
     std::vector<std::vector<cv::Point>> createLineZones(cv::Point firstPoint, cv::Point secondPoint, float width, float angle);
     bool createMask();
     void process(cv::Mat& image, std::vector<Detection> detections) override;
-    void draw(cv::Mat& image, std::vector<Detection> detections);
+    void draw(cv::Mat& image);
     std::vector<std::string> getStateInfoStr();
     int getLineNum() { return lineNum_; }
 };

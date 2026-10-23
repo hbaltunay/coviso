@@ -12,8 +12,8 @@ class BBox:
 @dataclass
 class Detection:
     bbox: BBox | None = None
-    cls: int = 0
-    id: int = 0
+    class_id: int = 0
+    track_id: int = 0
 
     def __post_init__(self) -> None:
         self.bbox = BBox()

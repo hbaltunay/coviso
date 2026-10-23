@@ -293,14 +293,13 @@ class LineTask(Task):
 
         d.last_line = d.current_line
 
-        agent_info.detection.id = agent_info.id
         agent_info.detection.bbox.x = d.move_data.current_coord[0]
         agent_info.detection.bbox.y = d.move_data.current_coord[1]
 
     def draw_canvas(self, canvas: np.ndarray) -> None:
         for line in self.line_info_list:
-            cv2.fillPoly(canvas, [line.entry_zone], [1])
-            cv2.fillPoly(canvas, [line.exit_zone], [2])
+            cv2.fillPoly(canvas, [line.entry_zone], (96, 96, 96))
+            cv2.fillPoly(canvas, [line.exit_zone], (160, 160, 160))
 
     def draw_canvas_status(self, canvas: np.ndarray) -> None:
         start_x = 15
@@ -319,7 +318,7 @@ class LineTask(Task):
                 (start_x, start_y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.9,
-                [255],
+                [255, 255, 255],
                 1,
                 cv2.LINE_AA,
             )

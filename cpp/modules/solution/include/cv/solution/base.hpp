@@ -5,6 +5,7 @@
 
 #include "cv/detect/core.hpp"
 #include "cv/tool/config.hpp"
+#include "cv/tool/logger.hpp"
 
 
 using Coordinate2D = std::vector<int>;
@@ -16,6 +17,8 @@ using CoordinateData = std::map<std::string, InnerMap>;
 class BaseSolution {
 protected:
     std::string name_;
+    cv::Size imgsz_;
+    Config config_;
     std::filesystem::path configPath_;
 
 public:

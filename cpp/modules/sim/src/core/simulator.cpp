@@ -3,7 +3,7 @@
 
 
 Simulator::Simulator(cv::Size imgsz) : imgsz_(imgsz) {
-    canvas_ = cv::Mat::zeros(imgsz_, CV_8UC1);
+    canvas_ = cv::Mat::zeros(imgsz_, CV_8UC3);
 }
 
 
@@ -53,24 +53,22 @@ void Simulator::run() {
         for (const auto& [name, task]: tasks_) {
             std::vector<Detection> detectionList = task->generate();
 
-            draw(display_canvas, detectionList, task->getPolyNum());
+            draw(display_canvas, detectionList);
 
             task->drawCanvasStatus(display_canvas);
         }
 
         cv::imshow("Simulation", display_canvas);
 
-        if (cv::waitKey(10) == 27) break; 
+        if (cv::waitKey(1) == 27) break; 
     }
 }
 
-void Simulator::draw(cv::Mat& image, std::vector<Detection> detections, int color) {
+void Simulator::draw(cv::Mat& image, std::vector<Detection> detections) {
     for (Detection detection : detections) {
         cv::Point center(detection.bbox.x, detection.bbox.y);
-        cv::circle(image, center, 5, cv::Scalar(color + 1), -1);
+        cv::circle(image, center, 5, cv::Scalar(255, 255, 255), -1);
     }
-
-    cv::normalize(image, image, 0, 255, cv::NORM_MINMAX);
 }
 
 void Simulator::writeState(cv::Mat& image, std::vector<std::string> strSummary) {
@@ -84,7 +82,7 @@ void Simulator::writeState(cv::Mat& image, std::vector<std::string> strSummary) 
                     cv::Point(startX, startY), 
                     cv::FONT_HERSHEY_SIMPLEX, 
                     0.9,
-                    cv::Scalar(255),
+                    cv::Scalar(255, 255, 255),
                     1,
                     cv::LINE_AA);
         startY += lineSpacing;

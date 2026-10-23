@@ -7,8 +7,8 @@ import numpy as np
 
 from coviso.detect.core import Detection
 from coviso.solution.base import BaseSolution, CoordinateData
+from coviso.solution.draw import draw_line
 from coviso.solution.state import LineState, TrackInfo
-from coviso.tool.config import Config
 
 LOGGER = logging.getLogger("coviso")
 
@@ -19,25 +19,14 @@ class LineTracker(BaseSolution):
         self.mask: np.ndarray = np.empty(0)
         self.lines: CoordinateData = {}
         self.line_num: int = 0
-        self.state: LineState = LineState()
+        self.state: LineState = LineState(self.imgsz)
 
     def init(self) -> bool:
-        config = Config(self.config_path)
-        if not config.load():
-            return False
-
-        self.name = config.get_or("name", "")
+        self.name = self.config.get_or("name", "")
         if not self.name:
             return False
 
-        imgsz_dict: tuple[int, int] = config.get_or(
-            "imgsz", {"weight": 0, "height": 0}
-        )
-        if imgsz_dict["width"] <= 0 or imgsz_dict["height"] <= 0:
-            return False
-        self.imgsz = imgsz_dict["width"], imgsz_dict["height"]
-
-        self.lines = config.get_or("points", {})
+        self.lines = self.config.get_or("points", {})
         if not self.lines:
             return False
 
@@ -164,7 +153,7 @@ class LineTracker(BaseSolution):
         for det in detections:
             x = int(det.bbox.x)
             y = int(det.bbox.y)
-            track_id = int(det.id)
+            track_id = int(det.track_id)
 
             if x < 0 or x >= s2 or y < 0 or y >= s1:
                 continue
@@ -200,13 +189,10 @@ class LineTracker(BaseSolution):
             t.last_line = t.current_line
 
         self.state.update()
-        self.draw(image, detections)
+        self.draw(image)
 
-    def draw(self, image: np.ndarray, detections: list[Detection]) -> None:
-        for id, line_info in self.state.line_infos.items():
-            if id == 0:
-                continue
-            cv2.fillPoly(image, [line_info.line], (id))
+    def draw(self, image: np.ndarray) -> None:
+        draw_line(image, self.state.infos)
 
     def get_state_info_str(self) -> list[str]:
         return self.state.summary()

@@ -148,7 +148,7 @@ void ZoneTask::calculate(AgentInfo& agentInfo) {
 
 void ZoneTask::drawCanvas(cv::Mat& canvas) {
     for (const auto& [zoneName, zone] : zonesList_) {
-        cv::fillPoly(canvas, zone, cv::Scalar(1));
+        cv::fillPoly(canvas, zone, cv::Scalar(128, 128, 128));
     }
 }
 
@@ -166,7 +166,7 @@ void ZoneTask::drawCanvasStatus(cv::Mat& canvas) {
                     cv::Point(startX, startY), 
                     cv::FONT_HERSHEY_SIMPLEX, 
                     0.9,
-                    cv::Scalar(255),
+                    cv::Scalar(255, 255, 255),
                     1,
                     cv::LINE_AA);
 

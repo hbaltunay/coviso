@@ -10,7 +10,6 @@
 class ZoneTracker : public BaseSolution {
 private:
     std::string strategy_;
-    cv::Size imgsz_;
     cv::Mat mask_;
     CoordinateData zones_;
     int zoneNum_;
@@ -28,7 +27,7 @@ public:
     bool init();
     bool createMask();
     void process(cv::Mat& image, std::vector<Detection> detections) override;
-    void draw(cv::Mat& image, std::vector<Detection> detections);
+    void draw(cv::Mat& image);
     std::vector<std::string> getStateInfoStr();
     int getZoneNum() { return zoneNum_; }
 };

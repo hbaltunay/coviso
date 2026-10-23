@@ -154,13 +154,12 @@ class ZoneTask(Task):
 
         self.zone_info[d.current_zone] += 1
 
-        agent_info.detection.id = agent_info.id
         agent_info.detection.bbox.x = d.move_data.current_coord[0]
         agent_info.detection.bbox.y = d.move_data.current_coord[1]
 
     def draw_canvas(self, canvas: np.ndarray) -> None:
         for _, zone in self.zone_list:
-            cv2.fillPoly(canvas, zone, [1])
+            cv2.fillPoly(canvas, zone, (128, 128, 128))
 
     def draw_canvas_status(self, canvas: np.ndarray) -> None:
         start_x = 15
@@ -177,7 +176,7 @@ class ZoneTask(Task):
                 (start_x, start_y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.9,
-                [255],
+                (255, 255, 255),
                 1,
                 cv2.LINE_AA,
             )

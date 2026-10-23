@@ -240,8 +240,8 @@ void LineTask::calculate(AgentInfo& agentInfo) {
 
 void LineTask::drawCanvas(cv::Mat& canvas) {
     for (const auto& line : linesInfoList_) {
-        cv::fillPoly(canvas, {line.entryZone}, cv::Scalar(1));
-        cv::fillPoly(canvas, {line.exitZone}, cv::Scalar(2));
+        cv::fillPoly(canvas, {line.entryZone}, cv::Scalar(96, 96, 96));
+        cv::fillPoly(canvas, {line.exitZone}, cv::Scalar(160, 160, 160));
     }
 }
 
@@ -259,7 +259,7 @@ void LineTask::drawCanvasStatus(cv::Mat& canvas) {
                     cv::Point(startX, startY), 
                     cv::FONT_HERSHEY_SIMPLEX, 
                     0.9,
-                    cv::Scalar(255),
+                    cv::Scalar(255, 255, 255),
                     1,
                     cv::LINE_AA);
 

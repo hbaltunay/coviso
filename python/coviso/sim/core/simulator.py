@@ -19,7 +19,9 @@ class TaskList:
 class Simulator:
     def __init__(self, imgsz: tuple[int, int]) -> None:
         self.imgsz = imgsz
-        self.canvas = np.zeros((self.imgsz[1], self.imgsz[0]), dtype=np.uint8)
+        self.canvas = np.zeros(
+            (self.imgsz[1], self.imgsz[0], 3), dtype=np.uint8
+        )
 
         self.tasks: list[Task] = []
 
@@ -82,7 +84,7 @@ class Simulator:
             for task in self.tasks:
                 detection_list = task.generate()
 
-                self.draw(display_canvas, detection_list, task.get_poly_num())
+                self.draw(display_canvas, detection_list)
 
                 task.draw_canvas_status(display_canvas)
 
@@ -93,18 +95,15 @@ class Simulator:
 
         cv2.destroyAllWindows()
 
-    def draw(
-        self, image: np.ndarray, detections: list[Detection], color: int
-    ) -> None:
+    def draw(self, image: np.ndarray, detections: list[Detection]) -> None:
         for detection in detections:
             cv2.circle(
                 image,
                 np.array([detection.bbox.x, detection.bbox.y], dtype=np.int32),
                 5,
-                (color + 1),
+                (255, 255, 255),
                 -1,
             )
-        image[:] = cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX)
 
     def write_state(self, image: np.ndarray, summary_str: list[str]) -> None:
         start_x = 15
@@ -118,7 +117,7 @@ class Simulator:
                 (start_x, start_y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.9,
-                [255],
+                (255, 255, 255),
                 1,
                 cv2.LINE_AA,
             )
