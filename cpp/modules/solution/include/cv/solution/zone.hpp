@@ -5,15 +5,21 @@
 #include "base.hpp"
 #include "state.hpp"
 #include "cv/tool/logger.hpp"
+#include "cv/tool/export.h"
 
 
-class ZoneTracker : public BaseSolution {
+
+class CVS_EXPORT ZoneTracker : public BaseSolution {
 private:
     std::string strategy_;
-    cv::Size imgsz_;
-    cv::Mat mask_;
+
+    ZoneState state_;
+
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+    
     CoordinateData zones_;
-    int zoneNum_;
+    int zoneNum_ = 0;
 
     void (ZoneTracker::*activeStrategy)(std::vector<Detection> detections);
     void trackedStrategy(std::vector<Detection> detections);
@@ -23,12 +29,10 @@ public:
     ZoneTracker(std::filesystem::path configPath, std::string strategy = "plain");
     ~ZoneTracker();
 
-    ZoneState state_;
-
     bool init();
     bool createMask();
     void process(cv::Mat& image, std::vector<Detection> detections) override;
-    void draw(cv::Mat& image, std::vector<Detection> detections);
+    void draw(cv::Mat& image);
     std::vector<std::string> getStateInfoStr();
     int getZoneNum() { return zoneNum_; }
 };

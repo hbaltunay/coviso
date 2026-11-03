@@ -1,13 +1,27 @@
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
 #include "cv/sim/core.hpp"
 #include "cv/sim/tasks.hpp"
+#include "utils.hpp"
 
-int ZoneTask::getZoneValue(cv::Point2f coord) {
-    int zoneValue = static_cast<int>(mask_.at<uchar>(
+struct ZoneTask::Impl {
+    cv::Mat mask;
+};
+
+ZoneTask::ZoneTask() : impl_(std::make_unique<Impl>()) {}
+
+ZoneTask::~ZoneTask() = default;
+
+cv::Mat ZoneTask::getMask() { return impl_->mask; }
+
+int ZoneTask::getZoneValue(Point2f coord) {
+    int zoneValue = static_cast<int>(impl_->mask.at<uchar>(
         static_cast<int>(coord.y), 
         static_cast<int>(coord.x)));
     return zoneValue;
 }
-
 
 void ZoneTask::assignRandomTarget(const std::shared_ptr<AgentZData>& agentData) {
     int targetNum = agentData->rng.uniformInt(0, zonesList_.size());
@@ -58,8 +72,8 @@ bool ZoneTask::init(TaskData taskData) {
 }
 
 bool ZoneTask::createMask() {
-    mask_.create(imgsz_, CV_8UC1); 
-    mask_.setTo(0); 
+    impl_->mask.create(imgsz_.height, imgsz_.width, CV_8UC1); 
+    impl_->mask.setTo(0); 
 
     int zoneId = 1;
     constexpr int MAX_ZONE_ID = 255;
@@ -70,7 +84,7 @@ bool ZoneTask::createMask() {
         }
 
         const auto& zonePointsRaw = zoneMap.at("zone");
-        std::vector<cv::Point> zonePoints;
+        std::vector<Point2i> zonePoints;
         zonePoints.reserve(zonePointsRaw.size()); 
 
         for (const auto& pt : zonePointsRaw) {
@@ -84,11 +98,12 @@ bool ZoneTask::createMask() {
 
         if (zonePoints.size() < 3) continue;
 
-        std::vector<std::vector<cv::Point>> currentZone = { std::move(zonePoints) };            
+        std::vector<cv::Point> zonePointsCv = toCv(zonePoints);
+        std::vector<std::vector<cv::Point>> currentZone = { zonePointsCv };            
 
-        cv::fillPoly(mask_, currentZone, cv::Scalar(zoneId));
+        cv::fillPoly(impl_->mask, currentZone, cv::Scalar(zoneId));
 
-        cv::Mat zoneMask = cv::Mat::zeros(mask_.size(), mask_.type());
+        cv::Mat zoneMask = cv::Mat::zeros(impl_->mask.size(), impl_->mask.type());
         cv::fillPoly(zoneMask, currentZone, cv::Scalar(zoneId));
 
         cv::Mat exactValueMask;
@@ -98,12 +113,13 @@ bool ZoneTask::createMask() {
         // cv::Mat crossKernel = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
         cv::erode(exactValueMask, innerMask, cv::Mat());
 
-        std::vector<cv::Point> targetCoordinates;
-        cv::findNonZero(innerMask, targetCoordinates);
+        std::vector<cv::Point2f> targetCoordinatesCv;
+        cv::findNonZero(innerMask, targetCoordinatesCv);
 
-        coordinateMask[zoneId] = targetCoordinates;
+        coordinateMask[zoneId] = fromCv(targetCoordinatesCv);
 
-        zonesList_.emplace_back(std::move(zoneName), std::move(currentZone));
+        std::vector<std::vector<Point2i>> zone = { zonePoints};
+        zonesList_.emplace_back(std::move(zoneName), std::move(zone));
 
         zoneId++;
 
@@ -148,7 +164,8 @@ void ZoneTask::calculate(AgentInfo& agentInfo) {
 
 void ZoneTask::drawCanvas(cv::Mat& canvas) {
     for (const auto& [zoneName, zone] : zonesList_) {
-        cv::fillPoly(canvas, zone, cv::Scalar(1));
+        std::vector<cv::Point> zoneCv = toCv(zone[0]);   
+        cv::fillPoly(canvas, {zoneCv}, cv::Scalar(128, 128, 128));
     }
 }
 
@@ -166,7 +183,7 @@ void ZoneTask::drawCanvasStatus(cv::Mat& canvas) {
                     cv::Point(startX, startY), 
                     cv::FONT_HERSHEY_SIMPLEX, 
                     0.9,
-                    cv::Scalar(255),
+                    cv::Scalar(255, 255, 255),
                     1,
                     cv::LINE_AA);
 

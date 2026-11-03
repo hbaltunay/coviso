@@ -1,9 +1,23 @@
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+
 #include "cv/sim/core.hpp"
 #include "cv/sim/tasks.hpp"
+#include "utils.hpp"
 
+struct LineTask::Impl {
+    cv::Mat mask;
+};
 
-int LineTask::getLineValue(cv::Point2f coord) {
-    int zoneValue = static_cast<int>(mask_.at<uchar>(
+LineTask::LineTask() : impl_(std::make_unique<Impl>())  {}
+
+LineTask::~LineTask() = default;
+
+cv::Mat LineTask::getMask() { return impl_->mask; }
+
+int LineTask::getLineValue(Point2f coord) {
+    int zoneValue = static_cast<int>(impl_->mask.at<uchar>(
         static_cast<int>(coord.y), 
         static_cast<int>(coord.x)));
     return zoneValue;
@@ -59,7 +73,7 @@ bool LineTask::init(TaskData taskData) {
     return true;
 }
 
-std::vector<std::vector<cv::Point>> LineTask::createLineZones(cv::Point firstPoint, cv::Point secondPoint, float width, float angle) {
+std::vector<std::vector<Point2i>> LineTask::createLineZones(Point2i firstPoint, Point2i secondPoint, float width, float angle) {
     float dx = static_cast<float>(secondPoint.x - firstPoint.x);
     float dy = static_cast<float>(secondPoint.y - firstPoint.y);
     float lineLength = std::sqrt(dx * dx + dy * dy);
@@ -73,32 +87,32 @@ std::vector<std::vector<cv::Point>> LineTask::createLineZones(cv::Point firstPoi
 
     float shiftX = width * std::cos(finalAngleRad);
     float shiftY = width * std::sin(finalAngleRad);
-    cv::Point2f shiftVectorA(shiftX, shiftY);
+    Point2f shiftVectorA(shiftX, shiftY);
 
-    cv::Point2f shiftVectorB = -shiftVectorA;
+    Point2f shiftVectorB(-shiftX, -shiftY);
 
-    std::vector<cv::Point> lineEntry = {
+    std::vector<Point2i> lineEntry = {
         firstPoint,
         secondPoint,
-        cv::Point(static_cast<int>(secondPoint.x + shiftVectorA.x), static_cast<int>(secondPoint.y + shiftVectorA.y)),
-        cv::Point(static_cast<int>(firstPoint.x + shiftVectorA.x), static_cast<int>(firstPoint.y + shiftVectorA.y))
+        Point2i(static_cast<int>(secondPoint.x + shiftVectorA.x), static_cast<int>(secondPoint.y + shiftVectorA.y)),
+        Point2i(static_cast<int>(firstPoint.x + shiftVectorA.x), static_cast<int>(firstPoint.y + shiftVectorA.y))
     };
 
-    std::vector<cv::Point> lineExit = {
+    std::vector<Point2i> lineExit = {
         firstPoint,
         secondPoint,
-        cv::Point(static_cast<int>(secondPoint.x + shiftVectorB.x), static_cast<int>(secondPoint.y + shiftVectorB.y)),
-        cv::Point(static_cast<int>(firstPoint.x + shiftVectorB.x), static_cast<int>(firstPoint.y + shiftVectorB.y))
+        Point2i(static_cast<int>(secondPoint.x + shiftVectorB.x), static_cast<int>(secondPoint.y + shiftVectorB.y)),
+        Point2i(static_cast<int>(firstPoint.x + shiftVectorB.x), static_cast<int>(firstPoint.y + shiftVectorB.y))
     };
 
-    std::vector<std::vector<cv::Point>> result = { lineEntry, lineExit};
+    std::vector<std::vector<Point2i>> result = { lineEntry, lineExit};
 
     return result;
 }
 
 bool LineTask::createMask() {
-    mask_.create(imgsz_, CV_8UC1); 
-    mask_.setTo(0); 
+    impl_->mask.create(imgsz_.height, imgsz_.width, CV_8UC1); 
+    impl_->mask.setTo(0); 
 
     int lineId = 1;
     constexpr int MAX_LINE_ID = 254;
@@ -109,12 +123,12 @@ bool LineTask::createMask() {
         }
 
         const auto& linePointsRaw = lineMap.at("line");
-        std::vector<cv::Point> linePoints;
+        std::vector<Point2i> linePoints;
         linePoints.reserve(linePointsRaw.size());
 
         if (linePointsRaw.size() != 3 ) return false;    
         
-        cv::Point firstPoint, secondPoint;
+        Point2i firstPoint, secondPoint;
         float w = 0.0f;
         float a = 0.0f;
 
@@ -127,9 +141,9 @@ bool LineTask::createMask() {
                     linePoints.emplace_back(pt[0], pt[1]);
 
                     if (i == 0) {
-                        firstPoint = cv::Point(pt[0], pt[1]);
+                        firstPoint = Point2i(pt[0], pt[1]);
                     } else {
-                        secondPoint = cv::Point(pt[0], pt[1]);
+                        secondPoint = Point2i(pt[0], pt[1]);
                     }
                 }
             } else {
@@ -145,14 +159,15 @@ bool LineTask::createMask() {
 
         if (linePoints.size() != 3) continue;
 
-        std::vector<std::vector<cv::Point>> lineZones = createLineZones(firstPoint, secondPoint, w, a);
+        std::vector<std::vector<Point2i>> lineZones = createLineZones(firstPoint, secondPoint, w, a);
         
         for (const auto& lineZone : lineZones) {
-            std::vector<std::vector<cv::Point>> currentZone = { std::move(lineZone) };            
+            std::vector<cv::Point> lineZoneCv = toCv(lineZone);
+            std::vector<std::vector<cv::Point>> currentZone = { lineZoneCv };
 
-            cv::fillPoly(mask_, currentZone, cv::Scalar(lineId));
+            cv::fillPoly(impl_->mask, currentZone, cv::Scalar(lineId));
 
-            cv::Mat zoneMask = cv::Mat::zeros(mask_.size(), mask_.type());
+            cv::Mat zoneMask = cv::Mat::zeros(impl_->mask.size(), impl_->mask.type());
             cv::fillPoly(zoneMask, currentZone, cv::Scalar(lineId));
 
             cv::Mat exactValueMask;
@@ -162,8 +177,10 @@ bool LineTask::createMask() {
             // cv::Mat crossKernel = cv::getStructuringElement(cv::MORPH_CROSS, cv::Size(3, 3));
             cv::erode(exactValueMask, innerMask, cv::Mat());
 
-            std::vector<cv::Point> targetCoordinates;
-            cv::findNonZero(innerMask, targetCoordinates);
+            std::vector<cv::Point2f> targetCoordinatesCv;
+            cv::findNonZero(innerMask, targetCoordinatesCv);
+
+            std::vector<Point2f> targetCoordinates = fromCv(targetCoordinatesCv);
 
             coordinateMask[lineId] = targetCoordinates;
 
@@ -173,8 +190,8 @@ bool LineTask::createMask() {
         LineInfoData lineInfoData{lineName, firstPoint, secondPoint, w, a, { lineZones[0] }, { lineZones[1] }};
         linesInfoList_.emplace_back(lineInfoData);
 
-        std::vector<std::vector<cv::Point>> entryLine = { lineZones[0] };
-        std::vector<std::vector<cv::Point>> exitLine = { lineZones[1] };
+        std::vector<std::vector<Point2i>> entryLine = { lineZones[0] };
+        std::vector<std::vector<Point2i>> exitLine = { lineZones[1] };
 
         linesList_.emplace_back(std::move(lineName + "_entry"), std::move(entryLine));
         linesList_.emplace_back(std::move(lineName + "_exit"), std::move(exitLine));
@@ -188,7 +205,7 @@ bool LineTask::createMask() {
         };
     }
 
-    lineNum_ = lineId;
+    lineNum_ = lineId - 1;
 
     return true;
 }
@@ -240,8 +257,10 @@ void LineTask::calculate(AgentInfo& agentInfo) {
 
 void LineTask::drawCanvas(cv::Mat& canvas) {
     for (const auto& line : linesInfoList_) {
-        cv::fillPoly(canvas, {line.entryZone}, cv::Scalar(1));
-        cv::fillPoly(canvas, {line.exitZone}, cv::Scalar(2));
+        std::vector<cv::Point> entryZone = toCv(line.entryZone[0]);
+        std::vector<cv::Point> exitZone = toCv(line.exitZone[0]);   
+        cv::fillPoly(canvas, {entryZone}, cv::Scalar(96, 96, 96));
+        cv::fillPoly(canvas, {exitZone}, cv::Scalar(160, 160, 160));
     }
 }
 
@@ -250,7 +269,7 @@ void LineTask::drawCanvasStatus(cv::Mat& canvas) {
     int startY = 30;
     int lineSpacing = 25;
 
-    for (int lineId = 1; lineId <= lineInfo_.size(); lineId++) {
+    for (int lineId = 1; lineId <= lineNum_; lineId++) {
         LinePassedInfo info = lineInfo_.at(lineId); 
         std::string text = info.lineName + "-" + info.lineType + " : " + std::to_string(info.count);
 
@@ -259,7 +278,7 @@ void LineTask::drawCanvasStatus(cv::Mat& canvas) {
                     cv::Point(startX, startY), 
                     cv::FONT_HERSHEY_SIMPLEX, 
                     0.9,
-                    cv::Scalar(255),
+                    cv::Scalar(255, 255, 255),
                     1,
                     cv::LINE_AA);
 

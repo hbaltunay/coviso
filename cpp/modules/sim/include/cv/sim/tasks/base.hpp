@@ -1,12 +1,14 @@
 #pragma once
 
-#include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/highgui.hpp>
+#include <unordered_map>
 
+#include "cv/core/types.hpp"
 #include "cv/sim/core/agent.hpp"
 #include "cv/tool/config.hpp"
 
+namespace cv {
+class Mat;
+}
 
 using Coordinate2D = std::vector<int>;
 using CoordinateList = std::vector<Coordinate2D>;
@@ -17,7 +19,7 @@ struct TaskData {
     int agentNum;
     int seed;
     int fps;
-    cv::Size imgsz; 
+    Size<int> imgsz; 
     CoordinateData coorData;
 };
 

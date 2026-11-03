@@ -1,18 +1,19 @@
 #pragma once
 
-#include <unordered_map>
-
-#include "base.hpp"
-#include "physics.hpp"
 #include "cv/sim/core/rng.hpp"
 #include "cv/tool/logger.hpp"
+#include "base.hpp"
+#include "physics.hpp"
 
+namespace cv {
+class Mat;
+}
 
 struct ZonesData {
     const std::string name;
-    const std::vector<std::vector<cv::Point>> zone;
+    const std::vector<std::vector<Point2i>> zone;
 
-    ZonesData(std::string zoneName, std::vector<std::vector<cv::Point>> zonePoints)
+    ZonesData(std::string zoneName, std::vector<std::vector<Point2i>> zonePoints)
         : name(std::move(zoneName)), zone(std::move(zonePoints)) {}
 };
 
@@ -28,26 +29,31 @@ class ZoneTask : public Task {
 private:
     int agentNum_;
     int fps_;
-    cv::Size imgsz_;
+    Size<int> imgsz_;
     CoordinateData zones_;
     std::vector<ZonesData> zonesList_;
-    int zoneNum_;
+    int zoneNum_ = 0;
 
-    cv::Mat mask_;
-    std::unordered_map<int, std::vector<cv::Point>> coordinateMask;
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+
+    std::unordered_map<int, std::vector<Point2f>> coordinateMask;
     std::unordered_map<int, int> zoneInfo_;
 
 public:
+    ZoneTask();
+    ~ZoneTask();
+
     bool init(TaskData taskData) override;
     std::vector<Detection> generate() override;
     void calculate(AgentInfo& agentInfo) override;
 
     bool createMask();
 
-    int getZoneValue(cv::Point2f coord);
+    int getZoneValue(Point2f coord);
     void assignRandomTarget(const std::shared_ptr<AgentZData>& agentData);
 
-    cv::Mat getMask() { return mask_; }
+    cv::Mat getMask();
 
     void drawCanvas(cv::Mat& canvas) override;
     void drawCanvasStatus(cv::Mat& canvas) override;

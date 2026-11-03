@@ -8,16 +8,16 @@
 
 struct LineInfoData {
     const std::string name;
-    const cv::Point firstPoint;
-    const cv::Point secondPoint;
+    const Point2i firstPoint;
+    const Point2i secondPoint;
     const float width;
     const float angle;
-    const std::vector<std::vector<cv::Point>> entryZone;
-    const std::vector<std::vector<cv::Point>> exitZone;
+    const std::vector<std::vector<Point2i>> entryZone;
+    const std::vector<std::vector<Point2i>> exitZone;
 
-    LineInfoData(std::string lineName, cv::Point lineFirstPoint, cv::Point lineSecondPoint,
-        float lineWidth, float lineAngle, std::vector<std::vector<cv::Point>> lineEntryZone,
-        std::vector<std::vector<cv::Point>> lineExitZone) : name(std::move(lineName)), 
+    LineInfoData(std::string lineName, Point2i lineFirstPoint, Point2i lineSecondPoint,
+        float lineWidth, float lineAngle, std::vector<std::vector<Point2i>> lineEntryZone,
+        std::vector<std::vector<Point2i>> lineExitZone) : name(std::move(lineName)), 
         firstPoint(std::move(lineFirstPoint)), secondPoint(std::move(lineSecondPoint)),
         width(std::move(lineWidth)), angle(std::move(lineAngle)), entryZone(std::move(lineEntryZone)),
         exitZone(std::move(lineExitZone)) {}
@@ -25,9 +25,9 @@ struct LineInfoData {
 
 struct LineData {
     const std::string name;
-    const std::vector<std::vector<cv::Point>> line;
+    const std::vector<std::vector<Point2i>> line;
 
-    LineData(std::string lineName, std::vector<std::vector<cv::Point>> linePoints)
+    LineData(std::string lineName, std::vector<std::vector<Point2i>> linePoints)
         : name(std::move(lineName)), line(std::move(linePoints)) {}
 };
 
@@ -52,29 +52,34 @@ class LineTask : public Task {
 private:
     int agentNum_;
     int fps_;
-    cv::Size imgsz_;
+    Size<int> imgsz_;
     CoordinateData lines_;
     std::vector<LineInfoData> linesInfoList_;
     std::vector<LineData> linesList_;
-    int lineNum_;
+    int lineNum_ = 0;
 
-    cv::Mat mask_;
-    std::unordered_map<int, std::vector<cv::Point>> coordinateMask;
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+
+    std::unordered_map<int, std::vector<Point2f>> coordinateMask;
     std::unordered_map<int, LinePassedInfo> lineInfo_;
 
 public:
+    LineTask();
+    ~LineTask();
+
     bool init(TaskData taskData) override;
     std::vector<Detection> generate() override;
     void calculate(AgentInfo& agentInfo) override;
 
-    std::vector<std::vector<cv::Point>> createLineZones(cv::Point firstPoint, cv::Point secondPoint, float width, float angle);
+    std::vector<std::vector<Point2i>> createLineZones(Point2i firstPoint, Point2i secondPoint, float width, float angle);
     bool createMask();
 
-    int getLineValue(cv::Point2f coord);
+    int getLineValue(Point2f coord);
     void assignRandomTarget(const std::shared_ptr<AgentLData>& agentData);
     
 
-    cv::Mat getMask() { return mask_; }
+    cv::Mat getMask();
 
     void drawCanvas(cv::Mat& canvas) override;
     void drawCanvasStatus(cv::Mat& canvas) override;

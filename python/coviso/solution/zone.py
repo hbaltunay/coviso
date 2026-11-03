@@ -7,8 +7,8 @@ import numpy as np
 
 from coviso.detect.core import Detection
 from coviso.solution.base import BaseSolution, CoordinateData
+from coviso.solution.draw import draw_zone
 from coviso.solution.state import ZoneState
-from coviso.tool.config import Config
 
 LOGGER = logging.getLogger("coviso")
 
@@ -17,7 +17,7 @@ class ZoneTracker(BaseSolution):
     def __init__(self, config_path: Path, strategy: str = "plain") -> None:
         super().__init__(config_path)
         self.strategy = strategy
-        self.state: ZoneState = ZoneState()
+        self.state: ZoneState = ZoneState(imgsz=self.imgsz)
         self.zones: CoordinateData = {}
         self.mask: np.ndarray = np.empty(0)
 
@@ -27,22 +27,11 @@ class ZoneTracker(BaseSolution):
             self.active_strategy = self.plain_strategy
 
     def init(self) -> bool:
-        config = Config(self.config_path)
-        if not config.load():
-            return False
-
-        self.name = config.get_or("name", "")
+        self.name = self.config.get_or("name", "")
         if not self.name:
             return False
 
-        imgsz_dict: tuple[int, int] = config.get_or(
-            "imgsz", {"weight": 0, "height": 0}
-        )
-        if imgsz_dict["width"] <= 0 or imgsz_dict["height"] <= 0:
-            return False
-        self.imgsz = imgsz_dict["width"], imgsz_dict["height"]
-
-        self.zones = config.get_or("points", {})
+        self.zones = self.config.get_or("points", {})
         if not self.zones:
             return False
 
@@ -113,7 +102,7 @@ class ZoneTracker(BaseSolution):
         for det in detections:
             x = int(det.bbox.x)
             y = int(det.bbox.y)
-            track_id = det.id
+            track_id = det.track_id
 
             if x < 0 or x >= s2 or y < 0 or y >= s1:
                 continue
@@ -126,15 +115,10 @@ class ZoneTracker(BaseSolution):
 
     def process(self, image: np.ndarray, detections: list[Detection]) -> None:
         self.active_strategy(detections)
-        self.draw(image, detections)
+        self.draw(image)
 
-    def draw(self, image: np.ndarray, detections: list[Detection]) -> None:
-        for id, zone_info in self.state.zone_infos.items():
-            if id == 0:
-                continue
-            cv2.fillPoly(
-                image, [np.array(zone_info.zone, dtype=np.int32)], (id)
-            )
+    def draw(self, image: np.ndarray) -> None:
+        draw_zone(image, self.state.infos)
 
     def get_state_info_str(self) -> list[str]:
         return self.state.summary()

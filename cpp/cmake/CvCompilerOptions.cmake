@@ -1,0 +1,7 @@
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set(CV_WARNING_FLAGS -Wall -Wextra -Wpedantic -Wshadow)
+elseif(MSVC)
+  set(CV_WARNING_FLAGS /W4)
+else()
+  set(CV_WARNING_FLAGS "")
+endif()
