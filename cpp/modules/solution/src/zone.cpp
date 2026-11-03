@@ -1,9 +1,17 @@
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+
 #include "cv/solution/zone.hpp"
 #include "cv/solution/draw.hpp"
+#include "utils.hpp"
 
+
+struct ZoneTracker::Impl {
+    cv::Mat mask;
+};
 
 ZoneTracker::ZoneTracker(std::filesystem::path configPath, std::string strategy)
-    : BaseSolution(configPath), strategy_(strategy), state_(imgsz_){
+    : BaseSolution(configPath), strategy_(strategy), state_(imgsz_), impl_(std::make_unique<Impl>()) {
 
     if (strategy_ == "tracked") {
         activeStrategy = &ZoneTracker::trackedStrategy;
@@ -12,20 +20,20 @@ ZoneTracker::ZoneTracker(std::filesystem::path configPath, std::string strategy)
     }
 }
 
-ZoneTracker::~ZoneTracker() {}
+ZoneTracker::~ZoneTracker() = default;
 
 bool ZoneTracker::init() {
-    name_ = config_.get_or<std::string>("name", "");
+    name_ = config_->get_or<std::string>("name", "");
     if (name_.empty()) return false;
 
-    zones_ = config_.get_or<CoordinateData>("points", {});
+    zones_ = config_->get_or<CoordinateData>("points", {});
     if (zones_.empty()) return false;
 
     return createMask();
 }
 
 bool ZoneTracker::createMask() {
-    mask_ = cv::Mat::zeros(imgsz_, CV_8UC1); 
+    impl_->mask = cv::Mat::zeros(imgsz_.height, imgsz_.width, CV_8UC1); 
 
     int zoneId = 1;
     constexpr int MAX_ZONE_ID = 255;
@@ -52,11 +60,11 @@ bool ZoneTracker::createMask() {
         
         if (zonePoints.size() < 3) continue;
 
-        state_.add(zoneId, zonePoints);
+        state_.add(zoneId, fromCv(zonePoints));
 
         std::vector<std::vector<cv::Point>> currentZone = { std::move(zonePoints) };            
 
-        cv::fillPoly(mask_, currentZone, cv::Scalar(zoneId));
+        cv::fillPoly(impl_->mask, currentZone, cv::Scalar(zoneId));
 
         zoneId++;
 
@@ -79,11 +87,11 @@ void ZoneTracker::plainStrategy(std::vector<Detection> detections) {
         const int x = static_cast<int>(det.bbox.x);
         const int y = static_cast<int>(det.bbox.y);
 
-        if (x < 0 || x >= mask_.cols || y < 0 || y >= mask_.rows) [[unlikely]] {
+        if (x < 0 || x >= impl_->mask.cols || y < 0 || y >= impl_->mask.rows) [[unlikely]] {
             continue;
         }
 
-        uchar value_byte = mask_.at<uchar>(y, x);
+        uchar value_byte = impl_->mask.at<uchar>(y, x);
         int value = static_cast<int>(value_byte);
         zoneFreq[value]++;
     }
@@ -100,11 +108,11 @@ void ZoneTracker::trackedStrategy(std::vector<Detection> detections) {
         const int y = static_cast<int>(det.bbox.y);
         int trackId = det.trackId;
 
-        if (x < 0 || x >= mask_.cols || y < 0 || y >= mask_.rows) [[unlikely]] {
+        if (x < 0 || x >= impl_->mask.cols || y < 0 || y >= impl_->mask.rows) [[unlikely]] {
             continue;
         }
 
-        uchar value_byte = mask_.at<uchar>(y, x);
+        uchar value_byte = impl_->mask.at<uchar>(y, x);
         int value = static_cast<int>(value_byte);
 
         zoneInfos[value].inZone.push_back(trackId);
@@ -119,7 +127,7 @@ void ZoneTracker::process(cv::Mat& image, std::vector<Detection> detections) {
 }
 
 void ZoneTracker::draw(cv::Mat& image) {
-    drawZone(image, state_.infos());
+    drawZone(image, state_);
 }
 
 std::vector<std::string> ZoneTracker::getStateInfoStr() {

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <opencv2/core.hpp>
+#include "cv/core/types.hpp"
 
 
 struct MoveData {
-    cv::Point2f targetCoord, currentCoord;
-    cv::Point2f currentVel{0.f, 0.f};
+    Point2f targetCoord, currentCoord;
+    Point2f currentVel{0.f, 0.f};
     bool arrived = false;
     float maxSpeed;
     float maxAcceleration;

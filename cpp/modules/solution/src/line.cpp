@@ -1,17 +1,25 @@
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+
 #include "cv/solution/line.hpp"
 #include "cv/solution/draw.hpp"
+#include "utils.hpp"
 
+
+struct LineTracker::Impl {
+    cv::Mat mask;
+};
 
 LineTracker::LineTracker(std::filesystem::path configPath)
-    : BaseSolution(configPath), state_(imgsz_) {}
+    : BaseSolution(configPath), state_(imgsz_), impl_(std::make_unique<Impl>()) {}
 
-LineTracker::~LineTracker() {}
+LineTracker::~LineTracker() = default; 
 
 bool LineTracker::init() {
-    name_ = config_.get_or<std::string>("name", "");
+    name_ = config_->get_or<std::string>("name", "");
     if (name_.empty()) return false;
 
-    lines_ = config_.get_or<CoordinateData>("points", {});
+    lines_ = config_->get_or<CoordinateData>("points", {});
     if (lines_.empty()) return false;
 
     return createMask();
@@ -61,7 +69,7 @@ std::vector<std::vector<cv::Point>> LineTracker::createLineZones(cv::Point first
 
 
 bool LineTracker::createMask() {
-    mask_ = cv::Mat::zeros(imgsz_, CV_8UC1);
+    impl_->mask = cv::Mat::zeros(imgsz_.height, imgsz_.width, CV_8UC1);
 
     int lineId = 1;
     constexpr int MAX_LINE_ID = 254;
@@ -114,9 +122,9 @@ bool LineTracker::createMask() {
         for (const auto& lineZone : lineZones) {
             std::vector<std::vector<cv::Point>> currentZone = { std::move(lineZone) };            
             
-            cv::fillPoly(mask_, currentZone, cv::Scalar(lineId));
+            cv::fillPoly(impl_->mask, currentZone, cv::Scalar(lineId));
             
-            state_.add(lineId, lineZone);
+            state_.add(lineId, fromCv(lineZone));
             
             lineId++;
         }
@@ -127,7 +135,7 @@ bool LineTracker::createMask() {
         };
     }
 
-    lineNum_ = lineId;
+    lineNum_ = lineId - 1;
 
     return true;
 }
@@ -140,11 +148,11 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
         const int y = static_cast<int>(det.bbox.y);
         int trackId = det.trackId;
 
-        if (x < 0 || x >= mask_.cols || y < 0 || y >= mask_.rows) [[unlikely]] {
+        if (x < 0 || x >= impl_->mask.cols || y < 0 || y >= impl_->mask.rows) [[unlikely]] {
             continue;
         }
 
-        uchar value_byte = mask_.at<uchar>(y, x);
+        uchar value_byte = impl_->mask.at<uchar>(y, x);
         int value = static_cast<int>(value_byte);
 
         auto& t = state_.trackInfos[trackId];
@@ -177,7 +185,7 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
 }
 
 void LineTracker::draw(cv::Mat& image) {
-    drawLine(image, state_.infos());
+    drawLine(image, state_);
 }
 
 std::vector<std::string> LineTracker::getStateInfoStr() {

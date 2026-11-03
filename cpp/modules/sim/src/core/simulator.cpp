@@ -1,13 +1,22 @@
 #include <iostream>
 #include "cv/sim/core.hpp"
 
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
-Simulator::Simulator(cv::Size imgsz) : imgsz_(imgsz) {
-    canvas_ = cv::Mat::zeros(imgsz_, CV_8UC3);
+struct Simulator::Impl {
+    cv::Mat canvas;
+};
+
+Simulator::Simulator(Size<int> imgsz) : imgsz_(imgsz), impl_(std::make_unique<Impl>())  {
+    impl_->canvas = cv::Mat::zeros(imgsz_.height, imgsz_.width, CV_8UC3);
 }
 
+Simulator::~Simulator() = default; 
 
-bool Simulator::addTask(std::string name, std::string taskName, int agentNum, int seed, int fps, cv::Size imgsz, CoordinateData coorData) {
+cv::Mat& Simulator::getCanvas() { return impl_->canvas; }
+
+bool Simulator::addTask(std::string name, std::string taskName, int agentNum, int seed, int fps, Size<int> imgsz, CoordinateData coorData) {
     std::unique_ptr<Task> task = TaskFactory::getInstance().createTask(taskName);
 
     TaskData taskData{agentNum, seed, fps, imgsz, coorData};
@@ -15,7 +24,7 @@ bool Simulator::addTask(std::string name, std::string taskName, int agentNum, in
     bool success = task->init(taskData);
     if (!success) return false;
 
-    task->drawCanvas(canvas_);
+    task->drawCanvas(impl_->canvas);
 
     tasks_.push_back({name, std::move(task)});
 
@@ -23,23 +32,23 @@ bool Simulator::addTask(std::string name, std::string taskName, int agentNum, in
 }
 
 bool Simulator::addTaskConfig(std::string name, std::filesystem::path configPath) {
-    Config config(configPath);
-    if (!config.load()) return false;
+    std::unique_ptr<Config> config = std::make_unique<Config>(configPath);
+    if (!config->load()) return false;
 
-    std::string taskName = config.get_or<std::string>("taskName", "");
+    std::string taskName = config->get_or<std::string>("taskName", "");
     if (taskName.empty()) return false;
 
-    cv::Size imgsz = config.get_or<cv::Size>("imgsz", cv::Size());
-    if (imgsz.width <= 0 || imgsz.height <= 0) return false;
+    imgsz_ = config->get_or<Size<int>>("imgsz", Size<int>(0, 0));
+    if (imgsz_.area() <= 0) throw std::runtime_error("Invalid imgsz");
 
-    CoordinateData coorData = config.get_or<CoordinateData>("points", {});
+    CoordinateData coorData = config->get_or<CoordinateData>("points", {});
     if (coorData.empty()) return false;
 
-    int agentNum = config.get_or<int>("agentNum", 1);
-    int seed = config.get_or<int>("seed", 123);
-    int fps = config.get_or<int>("fps", 30);
+    int agentNum = config->get_or<int>("agentNum", 1);
+    int seed = config->get_or<int>("seed", 123);
+    int fps = config->get_or<int>("fps", 30);
 
-    bool success = addTask(name, taskName, agentNum, seed, fps, imgsz, coorData);
+    bool success = addTask(name, taskName, agentNum, seed, fps, imgsz_, coorData);
 
     return success;
 }
@@ -48,7 +57,7 @@ void Simulator::run() {
     while (true) {
 
         cv::Mat display_canvas;
-        canvas_.copyTo(display_canvas);
+        impl_->canvas.copyTo(display_canvas);
 
         for (const auto& [name, task]: tasks_) {
             std::vector<Detection> detectionList = task->generate();

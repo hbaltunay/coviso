@@ -5,19 +5,23 @@
 #include "base.hpp"
 #include "state.hpp"
 #include "cv/tool/logger.hpp"
+#include "cv/tool/export.h"
 
 
-class LineTracker : public BaseSolution {
+class CVS_EXPORT LineTracker : public BaseSolution {
 private:
-    cv::Mat mask_;
+    LineState state_;
+    
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
+
     CoordinateData lines_;
-    int lineNum_;
+    int lineNum_ = 0;
 
 public:
     LineTracker(std::filesystem::path configPath);
     ~LineTracker();
 
-    LineState state_;
 
     bool init();
     std::vector<std::vector<cv::Point>> createLineZones(cv::Point firstPoint, cv::Point secondPoint, float width, float angle);

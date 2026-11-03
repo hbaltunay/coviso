@@ -1,0 +1,14 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/CvTargets.cmake")
+
+set(CV_AVAILABLE_MODULES "@CV_MODULES_ENABLED@")
+foreach(comp IN LISTS CV_FIND_COMPONENTS)
+  if(comp IN_LIST CV_AVAILABLE_MODULES)
+    set(CV_${comp}_FOUND TRUE)
+  else()
+    set(CV_${comp}_FOUND FALSE)
+  endif()
+endforeach()
+
+check_required_components(CV)

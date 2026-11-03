@@ -1,25 +1,23 @@
 #pragma once
 
 #include <vector>
-#include <opencv2/opencv.hpp>
 
+#include "cv/core/types.hpp"
 #include "cv/detect/core.hpp"
 #include "cv/tool/config.hpp"
 #include "cv/tool/logger.hpp"
 
-
-using Coordinate2D = std::vector<int>;
-using CoordinateList = std::vector<Coordinate2D>;
-using InnerMap = std::map<std::string, CoordinateList>;
-using CoordinateData = std::map<std::string, InnerMap>;
-
+namespace cv {
+class Mat;
+}
 
 class BaseSolution {
 protected:
-    std::string name_;
-    cv::Size imgsz_;
-    Config config_;
+    std::unique_ptr<Config> config_;
     std::filesystem::path configPath_;
+    Size<int> imgsz_;
+    std::string name_;
+
 
 public:
     BaseSolution(std::filesystem::path configPath_);

@@ -1,3 +1,8 @@
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+
+#include "cv/core/types.hpp"
 #include "cv/sim/core.hpp"
 #include "cv/sim/tasks.hpp"
 #include "cv/solution/zone.hpp"
@@ -13,7 +18,7 @@ void onMouse(int event, int x, int y, int flags, void* userdata) {
 
                 if (data != nullptr) {
                     MoveData& movedata = data->moveData;
-                    movedata.targetCoord = cv::Point2f(static_cast<float>(x), static_cast<float>(y));
+                    movedata.targetCoord = Point2f(static_cast<float>(x), static_cast<float>(y));
                 }
             }
         }
@@ -21,9 +26,9 @@ void onMouse(int event, int x, int y, int flags, void* userdata) {
 }
 
 int main() {
-    Logger::init();
+    cvs::logInit();
 
-    cv::Point imgsz(1280, 720);
+    Size<int> imgsz(1280, 720);
 
     Simulator sim(imgsz);
 

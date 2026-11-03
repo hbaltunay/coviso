@@ -1,10 +1,11 @@
+#include "cv/core/types.hpp"
 #include "cv/sim/core.hpp"
 
 
 int main() {
-    Logger::init();
+    cvs::logInit();
 
-    cv::Point imgsz(1280, 720);
+    Size<int> imgsz(1280, 720);
 
     Simulator sim(imgsz);
 
