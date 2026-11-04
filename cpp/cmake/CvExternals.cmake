@@ -9,6 +9,7 @@ function(cv_find_external_gstreamer out_var)
     add_library(cv_ext_gstreamer INTERFACE)
     target_link_libraries(cv_ext_gstreamer INTERFACE PkgConfig::CV_GST)
     set(${out_var} TRUE PARENT_SCOPE)
+    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_gstreamer" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -37,6 +38,8 @@ function(cv_find_external_opencv out_var)
       target_include_directories(cv_ext_opencv INTERFACE ${OpenCV_INCLUDE_DIRS})
     endif()
     set(${out_var} TRUE PARENT_SCOPE)
+    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_opencv" CACHE INTERNAL "")
+
   endif()
 endfunction()
 
@@ -58,6 +61,7 @@ function(cv_find_external_nlohmann_json out_var)
     add_library(cv_ext_nlohmann_json INTERFACE)
     target_link_libraries(cv_ext_nlohmann_json INTERFACE nlohmann_json::nlohmann_json)
     set(${out_var} TRUE PARENT_SCOPE)
+    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_nlohmann_json" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -68,6 +72,7 @@ function(cv_find_external_spdlog out_var)
     add_library(cv_ext_spdlog INTERFACE)
     target_link_libraries(cv_ext_spdlog INTERFACE spdlog::spdlog)
     set(${out_var} TRUE PARENT_SCOPE)
+    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_spdlog" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -124,4 +129,11 @@ function(cv_external_available token out_var)
   endif()
   get_property(comp_found GLOBAL PROPERTY CV_EXTCOMP_${key})
   set(${out_var} ${comp_found} PARENT_SCOPE)
+endfunction()
+
+function(cv_external_export)
+  install(TARGETS ${CV_EXT_TARGETS} EXPORT CvTargets
+    LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
 endfunction()

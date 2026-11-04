@@ -54,6 +54,7 @@ set(CV_INITIAL_PASS OFF)
 # RESOLVE
 # ==============================================================================
 
+set(CV_EXT_TARGETS "" CACHE INTERNAL "")
 cv_resolve_modules(CV_MODULES)
 set(CV_MODULES_ENABLED "$(CV_MODULES)" CACHE INTERNAL "")
 
@@ -75,6 +76,7 @@ add_library(cv::cv ALIAS cv_all)
 foreach(m IN LISTS CV_MODULES)
   target_link_libraries(cv_all INTERFACE cv_${m})
 endforeach()
+cv_external_export()
 
 # ==============================================================================
 # INSTALL
