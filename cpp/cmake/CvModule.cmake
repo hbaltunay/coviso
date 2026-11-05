@@ -39,7 +39,7 @@ function(cv_create_module)
   set(gen_inc "${CMAKE_CURRENT_BINARY_DIR}/include")
   generate_export_header(${target}
     BASE_NAME         CVS_${NAME_U}
-    EXPORT_MACRO_NAME CVS_EXPORT
+    EXPORT_MACRO_NAME CVS_${NAME_U}_EXPORT
     EXPORT_FILE_NAME  "${gen_inc}/cv/${name}/export.h")
   if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(${target} PUBLIC CVS_${NAME_U}_STATIC_DEFINE)

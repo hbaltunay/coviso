@@ -10,7 +10,7 @@
 #include "cv/tool/export.h"
 
 
-class CVS_EXPORT Config {
+class CVS_TOOL_EXPORT Config {
 public:
     Config();
     explicit Config(const std::filesystem::path& configPath);

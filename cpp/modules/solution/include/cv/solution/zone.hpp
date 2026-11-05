@@ -5,11 +5,10 @@
 #include "base.hpp"
 #include "state.hpp"
 #include "cv/tool/logger.hpp"
-#include "cv/tool/export.h"
+#include "cv/solution/export.h"
 
 
-
-class CVS_EXPORT ZoneTracker : public BaseSolution {
+class CVS_SOLUTION_EXPORT ZoneTracker : public BaseSolution {
 private:
     std::string strategy_;
 

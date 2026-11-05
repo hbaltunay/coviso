@@ -55,8 +55,9 @@ set(CV_INITIAL_PASS OFF)
 # ==============================================================================
 
 set(CV_EXT_TARGETS "" CACHE INTERNAL "")
+set(CV_EXT_PACKAGES "" CACHE INTERNAL "")
 cv_resolve_modules(CV_MODULES)
-set(CV_MODULES_ENABLED "$(CV_MODULES)" CACHE INTERNAL "")
+set(CV_MODULES_ENABLED "${CV_MODULES}" CACHE INTERNAL "")
 
 message(STATUS "CV modules (build order): ${CV_MODULES}")
 foreach(m IN LISTS CV_MODULES)
@@ -76,11 +77,14 @@ add_library(cv::cv ALIAS cv_all)
 foreach(m IN LISTS CV_MODULES)
   target_link_libraries(cv_all INTERFACE cv_${m})
 endforeach()
+set_target_properties(cv_all PROPERTIES EXPORT_NAME cv)
 cv_external_export()
 
 # ==============================================================================
 # INSTALL
 # ==============================================================================
+
+install(TARGETS cv_all EXPORT CvTargets)
 
 install(EXPORT CvTargets
         NAMESPACE cv::
