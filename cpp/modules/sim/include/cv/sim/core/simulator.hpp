@@ -15,7 +15,7 @@ struct TaskList {
     std::unique_ptr<Task> task;
 };
 
-class CVS_EXPORT Simulator {
+class CVS_SIM_EXPORT Simulator {
 private:
     Size<int> imgsz_;
     

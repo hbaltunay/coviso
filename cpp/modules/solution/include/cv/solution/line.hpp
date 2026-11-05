@@ -5,10 +5,10 @@
 #include "base.hpp"
 #include "state.hpp"
 #include "cv/tool/logger.hpp"
-#include "cv/tool/export.h"
+#include "cv/solution/export.h"
 
 
-class CVS_EXPORT LineTracker : public BaseSolution {
+class CVS_SOLUTION_EXPORT LineTracker : public BaseSolution {
 private:
     LineState state_;
     

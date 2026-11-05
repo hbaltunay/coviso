@@ -10,15 +10,15 @@ namespace cvs {
 
 enum class LogLevel { Trace, Debug, Info, Warn, Error, Critical, Off };
 
-CVS_EXPORT void logInit();
+CVS_TOOL_EXPORT void logInit();
 
-CVS_EXPORT void setLogLevel(LogLevel level);
+CVS_TOOL_EXPORT void setLogLevel(LogLevel level);
 
 namespace detail {
 
-#define CVS_DECLARE_LEVEL(name)                         \
-    CVS_EXPORT bool is_##name##_enabled();              \
-    CVS_EXPORT void write_##name(std::string_view msg);
+#define CVS_DECLARE_LEVEL(name)                              \
+    CVS_TOOL_EXPORT bool is_##name##_enabled();              \
+    CVS_TOOL_EXPORT void write_##name(std::string_view msg);
 
 CVS_DECLARE_LEVEL(trace)
 CVS_DECLARE_LEVEL(debug)

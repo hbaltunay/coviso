@@ -10,6 +10,7 @@ function(cv_find_external_gstreamer out_var)
     target_link_libraries(cv_ext_gstreamer INTERFACE PkgConfig::CV_GST)
     set(${out_var} TRUE PARENT_SCOPE)
     set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_gstreamer" CACHE INTERNAL "")
+    set(CV_EXT_PACKAGES "${CV_EXT_PACKAGES};gstreamer-1.0" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -26,6 +27,7 @@ function(cv_find_external_component_gstreamer comp out_var)
     target_link_libraries(cv_ext_gstreamer_${comp} INTERFACE
       cv_ext_gstreamer PkgConfig::CV_GST_${cid})
     set(${out_var} TRUE PARENT_SCOPE)
+    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_gstreamer_${comp}" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -39,7 +41,7 @@ function(cv_find_external_opencv out_var)
     endif()
     set(${out_var} TRUE PARENT_SCOPE)
     set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_opencv" CACHE INTERNAL "")
-
+    set(CV_EXT_PACKAGES "${CV_EXT_PACKAGES};OpenCV" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -50,6 +52,7 @@ function(cv_find_external_component_opencv comp out_var)
     target_link_libraries(cv_ext_opencv_${comp} INTERFACE
       cv_ext_opencv opencv_${comp})
     set(${out_var} TRUE PARENT_SCOPE)
+    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_opencv_${comp}" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -62,6 +65,7 @@ function(cv_find_external_nlohmann_json out_var)
     target_link_libraries(cv_ext_nlohmann_json INTERFACE nlohmann_json::nlohmann_json)
     set(${out_var} TRUE PARENT_SCOPE)
     set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_nlohmann_json" CACHE INTERNAL "")
+    set(CV_EXT_PACKAGES "${CV_EXT_PACKAGES};nlohmann_json" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -73,6 +77,7 @@ function(cv_find_external_spdlog out_var)
     target_link_libraries(cv_ext_spdlog INTERFACE spdlog::spdlog)
     set(${out_var} TRUE PARENT_SCOPE)
     set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_spdlog" CACHE INTERNAL "")
+    set(CV_EXT_PACKAGES "${CV_EXT_PACKAGES};spdlog" CACHE INTERNAL "")
   endif()
 endfunction()
 
@@ -132,8 +137,10 @@ function(cv_external_available token out_var)
 endfunction()
 
 function(cv_external_export)
-  install(TARGETS ${CV_EXT_TARGETS} EXPORT CvTargets
-    LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
+  if(CV_EXT_TARGETS)
+    install(TARGETS ${CV_EXT_TARGETS} EXPORT CvTargets
+      LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
+  endif()
 endfunction()
