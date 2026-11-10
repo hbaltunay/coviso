@@ -62,7 +62,7 @@ struct ZoneState::Impl {
 
 ZoneState::ZoneState(Size<int> imgsz) : State(imgsz), impl_(std::make_unique<Impl>()) {}
 
-ZoneState::~ZoneState() = default;
+ZoneState::~ZoneState() {}
 
 std::vector<std::string> ZoneState::summary() {
     std::vector<std::string> strInfos;
@@ -179,7 +179,7 @@ struct LineState::Impl {
 
 LineState::LineState(Size<int> imgsz) : State(imgsz), impl_(std::make_unique<Impl>()) {}
 
-LineState::~LineState() = default;
+LineState::~LineState() {}
 
 std::vector<std::string> LineState::summary() {
     std::vector<std::string> strInfos;

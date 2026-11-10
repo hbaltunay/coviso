@@ -24,7 +24,7 @@ public:
 
 
     bool init();
-    std::vector<std::vector<cv::Point>> createLineZones(cv::Point firstPoint, cv::Point secondPoint, float width, float angle);
+    std::vector<std::vector<Point2i>> createLineZones(Point2i firstPoint, Point2i secondPoint, float width, float angle);
     bool createMask();
     void process(cv::Mat& image, std::vector<Detection> detections) override;
     void draw(cv::Mat& image);

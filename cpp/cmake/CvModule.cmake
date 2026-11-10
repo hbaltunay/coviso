@@ -19,65 +19,84 @@ function(cv_create_module)
 
   set(name ${CV_MODULE_NAME})
   set(target cv_${name})
+  set(obj ${target}_obj)
   string(TOUPPER ${name} NAME_U)
   set(deps ${CV_MODULE_${name}_DEPS})
+  set(exts ${CV_MODULE_${name}_EXT_REQUIRED} ${CV_MODULE_${name}_EXT_OPTIONAL})
 
   file(GLOB_RECURSE srcs CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
   if(NOT srcs)
     message(FATAL_ERROR "cv_${name}: no .cpp files found under src/")
   endif()
 
-  add_library(${target} ${srcs})
+  # OBJECT
+  add_library(${obj} OBJECT ${srcs})
+  
+  add_library(${target} $<TARGET_OBJECTS:${obj}>)
   add_library(cv::${name} ALIAS ${target})
 
   set_target_properties(${target} PROPERTIES
-    OUTPUT_NAME ${target}
-    EXPORT_NAME ${name}
-    VERSION     ${PROJECT_VERSION}
-    SOVERSION   ${PROJECT_VERSION_MAJOR})
+    LINKER_LANGUAGE CXX
+    OUTPUT_NAME     ${target}
+    EXPORT_NAME     ${name}
+    VERSION         ${PROJECT_VERSION}
+    SOVERSION       ${PROJECT_VERSION_MAJOR})
 
   set(gen_inc "${CMAKE_CURRENT_BINARY_DIR}/include")
   generate_export_header(${target}
     BASE_NAME         CVS_${NAME_U}
     EXPORT_MACRO_NAME CVS_${NAME_U}_EXPORT
     EXPORT_FILE_NAME  "${gen_inc}/cv/${name}/export.h")
-  if(NOT BUILD_SHARED_LIBS)
-    target_compile_definitions(${target} PUBLIC CVS_${NAME_U}_STATIC_DEFINE)
+
+  if(BUILD_SHARED_LIBS)
+    target_compile_definitions(${obj} PUBLIC ${target}_EXPORTS)
+  else()
+    target_compile_definitions(${obj}    PUBLIC CV_${NAME_U}_STATIC_DEFINE)
+    target_compile_definitions(${target} PUBLIC CV_${NAME_U}_STATIC_DEFINE)
   endif()
 
+  target_include_directories(${obj}
+    PUBLIC
+      ${CMAKE_CURRENT_SOURCE_DIR}/include
+      ${gen_inc}
+    PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src)
   target_include_directories(${target}
     PUBLIC
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
       $<BUILD_INTERFACE:${gen_inc}>
-      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    PRIVATE
-      ${CMAKE_CURRENT_SOURCE_DIR}/src)
+      $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
   foreach(d IN LISTS deps)
-    target_link_libraries(${target} PUBLIC cv::${d})
+    target_link_libraries(${obj}    PUBLIC cv_${d})
+    target_link_libraries(${target} PUBLIC cv_${d})
   endforeach()
 
-  foreach(e IN LISTS CV_MODULE_${name}_EXT_REQUIRED CV_MODULE_${name}_EXT_OPTIONAL)
+  foreach(e IN LISTS exts)
     string(REPLACE ":" "_" ext_target "${e}")
     string(REGEX REPLACE ":.*$" "" ext_name "${e}")
     string(TOUPPER "${ext_name}" EXT_U)
+
+    target_link_libraries(${obj} PUBLIC cv_ext_${ext_target})
     if(e IN_LIST M_PUBLIC_EXTERNALS)
       target_link_libraries(${target} PUBLIC cv_ext_${ext_target})
     else()
       target_link_libraries(${target} PRIVATE cv_ext_${ext_target})
     endif()
-    target_compile_definitions(${target} PRIVATE CV_HAVE_${EXT_U})
+
+    target_compile_definitions(${obj} PUBLIC CV_HAVE_${EXT_U})
     if(e MATCHES "^[^:]+:(.+)$")
       string(TOUPPER "${CMAKE_MATCH_1}" COMP_U)
-      target_compile_definitions(${target} PRIVATE CV_HAVE_${EXT_U}_${COMP_U})
+      target_compile_definitions(${obj} PUBLIC CV_HAVE_${EXT_U}_${COMP_U})
     endif()
   endforeach()
 
   if(M_PRIVATE_LIBS)
+    target_link_libraries(${obj}    PUBLIC  ${M_PRIVATE_LIBS})
     target_link_libraries(${target} PRIVATE ${M_PRIVATE_LIBS})
   endif()
 
-  target_compile_options(${target} PRIVATE ${CV_WARNING_FLAGS})
+  target_compile_options(${obj} PRIVATE ${CV_WARNING_FLAGS})
 
   install(TARGETS ${target} EXPORT CvTargets
     LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -88,11 +107,25 @@ function(cv_create_module)
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/cv/${name})
 
   if(CV_BUILD_TESTS)
-    file(GLOB_RECURSE test_srcs CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp")
-    if(test_srcs)
-      add_executable(${target}_test ${test_srcs})
-      target_link_libraries(${target}_test PRIVATE ${target} GTest::gtest_main)
-      gtest_discover_tests(${target}_test)
+    file(GLOB_RECURSE unit_srcs CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/unit/*.cpp")
+    file(GLOB_RECURSE api_srcs  CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/api/*.cpp")
+
+    if(unit_srcs)
+      add_executable(${target}_unit_test ${unit_srcs})
+      target_link_libraries(${target}_unit_test PRIVATE ${obj} GTest::gtest_main)
+      target_include_directories(${target}_unit_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src)
+      gtest_discover_tests(${target}_unit_test
+        TEST_PREFIX ${name}.unit.
+        DISCOVERY_MODE PRE_TEST)
+    endif()
+
+    if(api_srcs)
+      add_executable(${target}_api_test ${api_srcs})
+      target_link_libraries(${target}_api_test PRIVATE ${target} GTest::gtest_main)
+      gtest_discover_tests(${target}_api_test
+        TEST_PREFIX ${name}.api.
+        DISCOVERY_MODE PRE_TEST)
     endif()
   endif()
 endfunction()

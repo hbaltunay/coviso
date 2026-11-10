@@ -23,6 +23,7 @@ protected:
     Size<int> imgsz_; 
 public:
     State(Size<int> imgsz);
+    virtual ~State() = default;
 
     virtual std::vector<std::string> summary() = 0; 
     // virtual bool update() = 0;
