@@ -8,6 +8,7 @@ import numpy as np
 from coviso.detect.core import Detection
 from coviso.solution.base import BaseSolution, CoordinateData
 from coviso.solution.draw import draw_line
+from coviso.solution.entity import EntityLine
 from coviso.solution.state import LineState, TrackInfo
 
 LOGGER = logging.getLogger("coviso")
@@ -20,6 +21,7 @@ class LineTracker(BaseSolution):
         self.lines: CoordinateData = {}
         self.line_num: int = 0
         self.state: LineState = LineState(self.imgsz)
+        self.entity: EntityLine = EntityLine()
 
     def init(self) -> bool:
         self.name = self.config.get_or("name", "")
@@ -160,11 +162,12 @@ class LineTracker(BaseSolution):
 
             value = int(self.mask[y][x])
 
+            self.entity.update(track_id, value)
+
             if track_id not in self.state.track_infos:
                 self.state.track_infos[track_id] = TrackInfo()
 
             t = self.state.track_infos[track_id]
-
             t.current_line = value
 
             if t.current_line != t.last_line:
@@ -179,6 +182,7 @@ class LineTracker(BaseSolution):
                     line_infos[passed_line].count += 1
                     t.passed = False
                     t.passed_num = 0
+                    self.entity.on_passed(track_id, passed_line)
                 elif t.current_line == t.passed_num:
                     t.passed = False
                 elif t.last_line == line_infos[t.current_line].line_num:
@@ -189,10 +193,11 @@ class LineTracker(BaseSolution):
             t.last_line = t.current_line
 
         self.state.update()
+        self.entity.apply()
         self.draw(image)
 
     def draw(self, image: np.ndarray) -> None:
-        draw_line(image, self.state.infos)
+        draw_line(image, self.state)
 
     def get_state_info_str(self) -> list[str]:
         return self.state.summary()

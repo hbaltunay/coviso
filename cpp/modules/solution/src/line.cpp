@@ -25,7 +25,6 @@ bool LineTracker::init() {
     return createMask();
 }
 
-
 std::vector<std::vector<Point2i>> LineTracker::createLineZones(Point2i firstPoint, Point2i secondPoint, float width, float angle) {
     float dx = static_cast<float>(secondPoint.x - firstPoint.x);
     float dy = static_cast<float>(secondPoint.y - firstPoint.y);
@@ -66,7 +65,6 @@ std::vector<std::vector<Point2i>> LineTracker::createLineZones(Point2i firstPoin
 
     return result;
 }
-
 
 bool LineTracker::createMask() {
     impl_->mask = cv::Mat::zeros(imgsz_.height, imgsz_.width, CV_8UC1);
@@ -155,6 +153,8 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
         uchar value_byte = impl_->mask.at<uchar>(y, x);
         int value = static_cast<int>(value_byte);
 
+        entity_.update(trackId, value);
+
         auto& t = state_.trackInfos[trackId];
 
         t.currentLine = value;
@@ -169,6 +169,7 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
                 lineInfos.at(passedLine).count++;
                 t.passed = false;
                 t.passedNum = 0;
+                entity_.onPassed(trackId, passedLine);
             } else if (t.currentLine == t.passedNum) {
                 t.passed = false;
             } else if (t.lastLine == lineInfos.at(t.currentLine).lineNum) {
@@ -181,6 +182,7 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
     }
 
     state_.update();
+    entity_.apply();
     draw(image);
 }
 

@@ -5,12 +5,14 @@
 #include "base.hpp"
 #include "state.hpp"
 #include "cv/tool/logger.hpp"
+#include "cv/solution/entity.hpp"
 #include "cv/solution/export.h"
 
 
 class CVS_SOLUTION_EXPORT LineTracker : public BaseSolution {
 private:
     LineState state_;
+    EntityLine entity_;
     
     struct Impl;
     std::unique_ptr<Impl> impl_;
@@ -21,7 +23,6 @@ private:
 public:
     LineTracker(std::filesystem::path configPath);
     ~LineTracker();
-
 
     bool init();
     std::vector<std::vector<Point2i>> createLineZones(Point2i firstPoint, Point2i secondPoint, float width, float angle);

@@ -105,11 +105,10 @@ bool ZoneState::updatePlain(std::unordered_map<int, int> zoneFreq) {
     return true;
 }
 
-bool ZoneState::updateTracked() {
+bool ZoneState::updateTracked(std::unordered_map<int, std::vector<int>> zoneIn) {
     for (int i = 0; i < zoneNum_; i++) {
-        zoneInfos_[i].num = zoneInfos_[i].inZone.size();
+        zoneInfos_[i].num = zoneIn[i].size();
         zoneInfos_[i].empty = zoneInfos_[i].num == 0;
-        zoneInfos_[i].inZone.clear();
     }
     return true;
 }
