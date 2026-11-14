@@ -1,3 +1,15 @@
+function(_cv_ext_register target)
+  set_property(GLOBAL APPEND PROPERTY CV_EXT_TARGETS ${target})
+endfunction()
+
+function(_cv_ext_config_add line)
+  set_property(GLOBAL APPEND_STRING PROPERTY CV_EXT_CONFIG "${line}\n")
+endfunction()
+
+# ==============================================================================
+# GSTREAMER
+# ==============================================================================
+
 function(cv_find_external_gstreamer out_var)
   set(${out_var} FALSE PARENT_SCOPE)
   find_package(PkgConfig QUIET)
@@ -9,8 +21,9 @@ function(cv_find_external_gstreamer out_var)
     add_library(cv_ext_gstreamer INTERFACE)
     target_link_libraries(cv_ext_gstreamer INTERFACE PkgConfig::CV_GST)
     set(${out_var} TRUE PARENT_SCOPE)
-    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_gstreamer" CACHE INTERNAL "")
-    set(CV_EXT_PACKAGES "${CV_EXT_PACKAGES};gstreamer-1.0" CACHE INTERNAL "")
+    _cv_ext_register(cv_ext_gstreamer)
+    _cv_ext_config_add("find_dependency(PkgConfig)")
+    _cv_ext_config_add("pkg_check_modules(CV_GST REQUIRED QUIET IMPORTED_TARGET GLOBAL gstreamer-1.0)")
   endif()
 endfunction()
 
@@ -27,9 +40,14 @@ function(cv_find_external_component_gstreamer comp out_var)
     target_link_libraries(cv_ext_gstreamer_${comp} INTERFACE
       cv_ext_gstreamer PkgConfig::CV_GST_${cid})
     set(${out_var} TRUE PARENT_SCOPE)
-    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_gstreamer_${comp}" CACHE INTERNAL "")
+    _cv_ext_register(cv_ext_gstreamer_${comp})
+    _cv_ext_config_add("pkg_check_modules(CV_GST_${cid} REQUIRED QUIET IMPORTED_TARGET GLOBAL gstreamer-${comp}-1.0)")
   endif()
 endfunction()
+
+# ==============================================================================
+# OPENCV
+# ==============================================================================
 
 function(cv_find_external_opencv out_var)
   set(${out_var} FALSE PARENT_SCOPE)
@@ -37,11 +55,13 @@ function(cv_find_external_opencv out_var)
   if(OpenCV_FOUND)
     add_library(cv_ext_opencv INTERFACE)
     if(OpenCV_INCLUDE_DIRS)
-      target_include_directories(cv_ext_opencv INTERFACE ${OpenCV_INCLUDE_DIRS})
+      target_include_directories(cv_ext_opencv INTERFACE
+        "$<BUILD_INTERFACE:${OpenCV_INCLUDE_DIRS}>")
     endif()
+    target_link_libraries(cv_ext_opencv INTERFACE ${OpenCV_LIBS})
     set(${out_var} TRUE PARENT_SCOPE)
-    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_opencv" CACHE INTERNAL "")
-    set(CV_EXT_PACKAGES "${CV_EXT_PACKAGES};OpenCV" CACHE INTERNAL "")
+    _cv_ext_register(cv_ext_opencv)
+    _cv_ext_config_add("find_dependency(OpenCV)")
   endif()
 endfunction()
 
@@ -52,10 +72,13 @@ function(cv_find_external_component_opencv comp out_var)
     target_link_libraries(cv_ext_opencv_${comp} INTERFACE
       cv_ext_opencv opencv_${comp})
     set(${out_var} TRUE PARENT_SCOPE)
-    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_opencv_${comp}" CACHE INTERNAL "")
+    _cv_ext_register(cv_ext_opencv_${comp})
   endif()
 endfunction()
 
+# ==============================================================================
+# NLOHMANN-JSON
+# ==============================================================================
 
 function(cv_find_external_nlohmann_json out_var)
   set(${out_var} FALSE PARENT_SCOPE)
@@ -64,10 +87,14 @@ function(cv_find_external_nlohmann_json out_var)
     add_library(cv_ext_nlohmann_json INTERFACE)
     target_link_libraries(cv_ext_nlohmann_json INTERFACE nlohmann_json::nlohmann_json)
     set(${out_var} TRUE PARENT_SCOPE)
-    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_nlohmann_json" CACHE INTERNAL "")
-    set(CV_EXT_PACKAGES "${CV_EXT_PACKAGES};nlohmann_json" CACHE INTERNAL "")
+    _cv_ext_register(cv_ext_nlohmann_json)
+    _cv_ext_config_add("find_dependency(nlohmann_json)")
   endif()
 endfunction()
+
+# ==============================================================================
+# SPDLOG
+# ==============================================================================
 
 function(cv_find_external_spdlog out_var)
   set(${out_var} FALSE PARENT_SCOPE)
@@ -76,10 +103,14 @@ function(cv_find_external_spdlog out_var)
     add_library(cv_ext_spdlog INTERFACE)
     target_link_libraries(cv_ext_spdlog INTERFACE spdlog::spdlog)
     set(${out_var} TRUE PARENT_SCOPE)
-    set(CV_EXT_TARGETS "${CV_EXT_TARGETS};cv_ext_spdlog" CACHE INTERNAL "")
-    set(CV_EXT_PACKAGES "${CV_EXT_PACKAGES};spdlog" CACHE INTERNAL "")
+    _cv_ext_register(cv_ext_spdlog)
+    _cv_ext_config_add("find_dependency(spdlog)")
   endif()
 endfunction()
+
+# ==============================================================================
+# CORE
+# ==============================================================================
 
 function(cv_external_available token out_var)
   string(REGEX REPLACE ":.*$" "" name "${token}")
@@ -92,7 +123,7 @@ function(cv_external_available token out_var)
   if(NOT pkg_known)
     if(NOT COMMAND cv_find_external_${name})
       message(FATAL_ERROR
-        "Unknown external dependency '${name}'."
+        "Unknown external dependency '${name}'. "
         "Define cv_find_external_${name}() within cmake/CvExternals.cmake.")
     endif()
     set(found FALSE)
@@ -120,8 +151,8 @@ function(cv_external_available token out_var)
   if(NOT comp_known)
     if(NOT COMMAND cv_find_external_component_${name})
       message(FATAL_ERROR
-        "'${token}' was requested, but component support for '${name}' is not defined."
-        "Define cv_find_external_component_${name}() within cmake/CVExternals.cmake.")
+        "'${token}' was requested, but component support for '${name}' is not defined. "
+        "Define cv_find_external_component_${name}() within cmake/CvExternals.cmake.")
     endif()
     set(cfound FALSE)
     cmake_language(CALL cv_find_external_component_${name} ${comp} cfound)
@@ -137,10 +168,8 @@ function(cv_external_available token out_var)
 endfunction()
 
 function(cv_external_export)
-  if(CV_EXT_TARGETS)
-    install(TARGETS ${CV_EXT_TARGETS} EXPORT CvTargets
-      LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-      RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
+  get_property(ext_targets GLOBAL PROPERTY CV_EXT_TARGETS)
+  if(ext_targets)
+    install(TARGETS ${ext_targets} EXPORT CvTargets)
   endif()
 endfunction()

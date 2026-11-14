@@ -54,8 +54,6 @@ set(CV_INITIAL_PASS OFF)
 # RESOLVE
 # ==============================================================================
 
-set(CV_EXT_TARGETS "" CACHE INTERNAL "")
-set(CV_EXT_PACKAGES "" CACHE INTERNAL "")
 cv_resolve_modules(CV_MODULES)
 set(CV_MODULES_ENABLED "${CV_MODULES}" CACHE INTERNAL "")
 
@@ -78,13 +76,14 @@ foreach(m IN LISTS CV_MODULES)
   target_link_libraries(cv_all INTERFACE cv_${m})
 endforeach()
 set_target_properties(cv_all PROPERTIES EXPORT_NAME cv)
+install(TARGETS cv_all EXPORT CvTargets)
 cv_external_export()
 
 # ==============================================================================
 # INSTALL
 # ==============================================================================
 
-install(TARGETS cv_all EXPORT CvTargets)
+get_property(CV_EXT_CONFIG GLOBAL PROPERTY CV_EXT_CONFIG)
 
 install(EXPORT CvTargets
         NAMESPACE cv::

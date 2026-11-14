@@ -25,8 +25,7 @@ bool LineTracker::init() {
     return createMask();
 }
 
-
-std::vector<std::vector<cv::Point>> LineTracker::createLineZones(cv::Point firstPoint, cv::Point secondPoint, float width, float angle) {
+std::vector<std::vector<Point2i>> LineTracker::createLineZones(Point2i firstPoint, Point2i secondPoint, float width, float angle) {
     float dx = static_cast<float>(secondPoint.x - firstPoint.x);
     float dy = static_cast<float>(secondPoint.y - firstPoint.y);
     float lineLength = std::sqrt(dx * dx + dy * dy);
@@ -44,29 +43,28 @@ std::vector<std::vector<cv::Point>> LineTracker::createLineZones(cv::Point first
 
     cv::Point2f shiftVectorB = -shiftVectorA;
 
-    std::vector<cv::Point> lineEntry = {
+    std::vector<Point2i> lineEntry = {
         firstPoint,
         secondPoint,
-        cv::Point(static_cast<int>(secondPoint.x + shiftVectorA.x), 
+        Point2i(static_cast<int>(secondPoint.x + shiftVectorA.x), 
                   static_cast<int>(secondPoint.y + shiftVectorA.y)),
-        cv::Point(static_cast<int>(firstPoint.x + shiftVectorA.x), 
+        Point2i(static_cast<int>(firstPoint.x + shiftVectorA.x), 
                   static_cast<int>(firstPoint.y + shiftVectorA.y))
     };
 
-    std::vector<cv::Point> lineExit = {
+    std::vector<Point2i> lineExit = {
         firstPoint,
         secondPoint,
-        cv::Point(static_cast<int>(secondPoint.x + shiftVectorB.x), 
+        Point2i(static_cast<int>(secondPoint.x + shiftVectorB.x), 
                   static_cast<int>(secondPoint.y + shiftVectorB.y)),
-        cv::Point(static_cast<int>(firstPoint.x + shiftVectorB.x), 
+        Point2i(static_cast<int>(firstPoint.x + shiftVectorB.x), 
                   static_cast<int>(firstPoint.y + shiftVectorB.y))
     };
 
-    std::vector<std::vector<cv::Point>> result = { lineEntry, lineExit};
+    std::vector<std::vector<Point2i>> result = { lineEntry, lineExit};
 
     return result;
 }
-
 
 bool LineTracker::createMask() {
     impl_->mask = cv::Mat::zeros(imgsz_.height, imgsz_.width, CV_8UC1);
@@ -85,7 +83,7 @@ bool LineTracker::createMask() {
 
         if (linePointsRaw.size() != 3 ) return false;    
         
-        cv::Point firstPoint, secondPoint;
+        Point2i firstPoint, secondPoint;
         float w = 0.0f;
         float a = 0.0f;
 
@@ -98,9 +96,9 @@ bool LineTracker::createMask() {
                     linePoints.emplace_back(pt[0], pt[1]);
 
                     if (i == 0) {
-                        firstPoint = cv::Point(pt[0], pt[1]);
+                        firstPoint = Point2i(pt[0], pt[1]);
                     } else {
-                        secondPoint = cv::Point(pt[0], pt[1]);
+                        secondPoint = Point2i(pt[0], pt[1]);
                     }
                 }
             } else {
@@ -117,14 +115,14 @@ bool LineTracker::createMask() {
         
         if (linePoints.size() != 3) continue;
         
-        std::vector<std::vector<cv::Point>> lineZones = createLineZones(firstPoint, secondPoint, w, a);
+        std::vector<std::vector<Point2i>> lineZones = createLineZones(firstPoint, secondPoint, w, a);
         
         for (const auto& lineZone : lineZones) {
-            std::vector<std::vector<cv::Point>> currentZone = { std::move(lineZone) };            
+            std::vector<std::vector<cv::Point>> currentZone = { std::move(toCv(lineZone)) };            
             
             cv::fillPoly(impl_->mask, currentZone, cv::Scalar(lineId));
             
-            state_.add(lineId, fromCv(lineZone));
+            state_.add(lineId, lineZone);
             
             lineId++;
         }
@@ -155,6 +153,8 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
         uchar value_byte = impl_->mask.at<uchar>(y, x);
         int value = static_cast<int>(value_byte);
 
+        entity_.update(trackId, value);
+
         auto& t = state_.trackInfos[trackId];
 
         t.currentLine = value;
@@ -169,6 +169,7 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
                 lineInfos.at(passedLine).count++;
                 t.passed = false;
                 t.passedNum = 0;
+                entity_.onPassed(trackId, passedLine);
             } else if (t.currentLine == t.passedNum) {
                 t.passed = false;
             } else if (t.lastLine == lineInfos.at(t.currentLine).lineNum) {
@@ -181,6 +182,7 @@ void LineTracker::process(cv::Mat& image, std::vector<Detection> detections) {
     }
 
     state_.update();
+    entity_.apply();
     draw(image);
 }
 

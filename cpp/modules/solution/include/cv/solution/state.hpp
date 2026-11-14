@@ -23,6 +23,7 @@ protected:
     Size<int> imgsz_; 
 public:
     State(Size<int> imgsz);
+    virtual ~State() = default;
 
     virtual std::vector<std::string> summary() = 0; 
     // virtual bool update() = 0;
@@ -60,7 +61,7 @@ public:
     bool remove(int infoId) override;
 
     bool updatePlain(std::unordered_map<int, int> zoneFreq);
-    bool updateTracked();
+    bool updateTracked(std::unordered_map<int, std::vector<int>> zoneIn);
 
     void draw(cv::Mat& image) override;
 };

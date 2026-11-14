@@ -26,6 +26,14 @@ class State(ABC):
 class ZoneInfo:
     info_id: int
     num: int
+    in_zone: list
+    empty: bool
+
+
+@dataclass
+class ZoneDrawInfo:
+    info_id: int
+    num: int
     zone: list
     in_zone: list
     empty: bool
@@ -66,6 +74,7 @@ class ZoneState(State):
     def __init__(self, imgsz: tuple[int]) -> None:
         super().__init__(imgsz)
         self.zone_infos: dict[int, ZoneInfo] = {}
+        self.zone_draw_infos: dict[int, ZoneDrawInfo] = {}
 
     def add(self, info_id: int, poly: list) -> bool:
         if info_id > 0:
@@ -76,8 +85,10 @@ class ZoneState(State):
         else:
             mask = None
 
-        zone_info = ZoneInfo(info_id, 0, poly, [], False, mask)
+        zone_info = ZoneInfo(info_id, 0, [], False)
+        zone_draw_info = ZoneDrawInfo(info_id, 0, poly, [], False, mask)
         self.zone_infos[info_id] = zone_info
+        self.zone_draw_infos[info_id] = zone_draw_info
         return True
 
     def remove(self, info_id: int) -> bool:
@@ -94,21 +105,36 @@ class ZoneState(State):
         return str_infos
 
     def update_plain(self, zone_freq: dict[int, int]) -> bool:
+        """
+        Zone monitoring method without object tracking.
+        """
         for i in range(len(self.zone_infos)):
             self.zone_infos[i].num = zone_freq[i]
             self.zone_infos[i].empty = self.zone_infos[i].num == 0
         return True
 
-    def update_tracked(self) -> bool:
+    def update_tracked(self, zone_in: dict[int, list]) -> bool:
+        """
+        Zone monitoring method with object tracking.
+        """
         for i in range(len(self.zone_infos)):
-            self.zone_infos[i].num = len(self.zone_infos[i].in_zone)
+            self.zone_infos[i].num = len(zone_in[i])
             self.zone_infos[i].empty = self.zone_infos[i].num == 0
-            self.zone_infos[i].in_zone.clear()
         return True
 
-    @property
-    def infos(self) -> dict[int, ZoneInfo]:
-        return self.zone_infos
+    def draw(self, image: np.ndarray) -> None:
+        for zone_id, zone in self.zone_draw_infos.items():
+            if zone_id == 0:
+                continue
+
+            roi = image[zone.roi]
+            overlay = (
+                zone.zero_roi
+                if self.zone_infos[zone_id].empty
+                else zone.one_roi
+            )
+            cv2.addWeighted(roi, 0.4, overlay, 0.6, 0, zone.blended)
+            cv2.copyTo(zone.blended, zone.mask_roi_u8, roi)
 
 
 @dataclass
@@ -121,6 +147,14 @@ class TrackInfo:
 
 @dataclass
 class LineInfo:
+    info_id: int
+    count: int
+    line_num: int
+    line_type: str
+
+
+@dataclass
+class LineDrawInfo:
     info_id: int
     count: int
     line_num: int
@@ -164,6 +198,7 @@ class LineState(State):
         super().__init__(imgsz)
         self.line_infos: dict[int, LineInfo] = {}
         self.track_infos: dict[int, TrackInfo] = {}
+        self.line_draw_infos: dict[int, LineDrawInfo] = {}
 
     def add(self, info_id: int, poly: list) -> bool:
         line_type, line_num = (
@@ -177,8 +212,12 @@ class LineState(State):
         cv2.fillPoly(mask0, current_zone, info_id)
         mask = mask0 == info_id
 
-        line_info = LineInfo(info_id, 0, line_num, line_type, poly, mask)
+        line_info = LineInfo(info_id, 0, line_num, line_type)
+        line_draw_info = LineDrawInfo(
+            info_id, 0, line_num, line_type, poly, mask
+        )
         self.line_infos[info_id] = line_info
+        self.line_draw_infos[info_id] = line_draw_info
         return True
 
     def remove(self, info_id: int) -> bool:
@@ -203,6 +242,8 @@ class LineState(State):
     def update(self) -> bool:
         return True
 
-    @property
-    def infos(self) -> dict[int, ZoneInfo]:
-        return self.line_infos
+    def draw(self, image: np.ndarray) -> None:
+        for line in self.line_draw_infos.values():
+            roi = image[line.roi]
+            cv2.addWeighted(roi, 0.4, line.line_roi, 0.6, 0, line.blended)
+            cv2.copyTo(line.blended, line.mask_roi_u8, roi)

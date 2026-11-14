@@ -100,9 +100,8 @@ void ZoneTracker::plainStrategy(std::vector<Detection> detections) {
 }
 
 void ZoneTracker::trackedStrategy(std::vector<Detection> detections) {
-
-    auto& zoneInfos = state_.zoneInfos_;
-
+    std::unordered_map<int, std::vector<int>> zoneIn;
+    
     for (Detection det : detections) {
         const int x = static_cast<int>(det.bbox.x);
         const int y = static_cast<int>(det.bbox.y);
@@ -114,11 +113,12 @@ void ZoneTracker::trackedStrategy(std::vector<Detection> detections) {
 
         uchar value_byte = impl_->mask.at<uchar>(y, x);
         int value = static_cast<int>(value_byte);
-
-        zoneInfos[value].inZone.push_back(trackId);
+        zoneIn[value].push_back(trackId);
+        entity_.update(trackId, value);
     }
 
-    state_.updateTracked();
+    state_.updateTracked(zoneIn);
+    entity_.apply();
 }
 
 void ZoneTracker::process(cv::Mat& image, std::vector<Detection> detections) {

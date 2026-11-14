@@ -5,6 +5,7 @@
 #include "base.hpp"
 #include "state.hpp"
 #include "cv/tool/logger.hpp"
+#include "cv/solution/entity.hpp"
 #include "cv/solution/export.h"
 
 
@@ -13,6 +14,7 @@ private:
     std::string strategy_;
 
     ZoneState state_;
+    EntityZone entity_;
 
     struct Impl;
     std::unique_ptr<Impl> impl_;

@@ -8,6 +8,7 @@ import numpy as np
 from coviso.detect.core import Detection
 from coviso.solution.base import BaseSolution, CoordinateData
 from coviso.solution.draw import draw_zone
+from coviso.solution.entity import EntityZone
 from coviso.solution.state import ZoneState
 
 LOGGER = logging.getLogger("coviso")
@@ -18,6 +19,7 @@ class ZoneTracker(BaseSolution):
         super().__init__(config_path)
         self.strategy = strategy
         self.state: ZoneState = ZoneState(imgsz=self.imgsz)
+        self.entity = EntityZone()
         self.zones: CoordinateData = {}
         self.mask: np.ndarray = np.empty(0)
 
@@ -81,44 +83,43 @@ class ZoneTracker(BaseSolution):
 
     def plain_strategy(self, detections: list[Detection]) -> None:
         zone_freq = defaultdict(int)
-        s1, s2 = self.mask.shape
 
         for det in detections:
             x = int(det.bbox.x)
             y = int(det.bbox.y)
 
-            if x < 0 or x >= s2 or y < 0 or y >= s1:
+            if x < 0 or x >= self.imgsz[0] or y < 0 or y >= self.imgsz[1]:
                 continue
 
             value = int(self.mask[y][x])
-
             zone_freq[value] += 1
 
         self.state.update_plain(zone_freq)
 
     def tracked_strategy(self, detections: list[Detection]) -> None:
-        s1, s2 = self.mask.shape
+        zone_in = defaultdict(list)
 
         for det in detections:
             x = int(det.bbox.x)
             y = int(det.bbox.y)
             track_id = det.track_id
 
-            if x < 0 or x >= s2 or y < 0 or y >= s1:
+            if x < 0 or x >= self.imgsz[0] or y < 0 or y >= self.imgsz[1]:
                 continue
 
             value = int(self.mask[y][x])
+            zone_in[value].append(track_id)
+            self.entity.update(track_id, value)
 
-            self.zone_infos[value].in_zone.append(track_id)
-
-        self.state.update_tracked()
+        self.state.update_tracked(zone_in)
+        self.entity.apply()
 
     def process(self, image: np.ndarray, detections: list[Detection]) -> None:
         self.active_strategy(detections)
         self.draw(image)
 
     def draw(self, image: np.ndarray) -> None:
-        draw_zone(image, self.state.infos)
+        draw_zone(image, self.state)
 
     def get_state_info_str(self) -> list[str]:
         return self.state.summary()

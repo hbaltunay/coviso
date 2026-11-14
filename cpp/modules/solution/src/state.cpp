@@ -62,7 +62,7 @@ struct ZoneState::Impl {
 
 ZoneState::ZoneState(Size<int> imgsz) : State(imgsz), impl_(std::make_unique<Impl>()) {}
 
-ZoneState::~ZoneState() = default;
+ZoneState::~ZoneState() {}
 
 std::vector<std::string> ZoneState::summary() {
     std::vector<std::string> strInfos;
@@ -105,11 +105,10 @@ bool ZoneState::updatePlain(std::unordered_map<int, int> zoneFreq) {
     return true;
 }
 
-bool ZoneState::updateTracked() {
+bool ZoneState::updateTracked(std::unordered_map<int, std::vector<int>> zoneIn) {
     for (int i = 0; i < zoneNum_; i++) {
-        zoneInfos_[i].num = zoneInfos_[i].inZone.size();
+        zoneInfos_[i].num = zoneIn[i].size();
         zoneInfos_[i].empty = zoneInfos_[i].num == 0;
-        zoneInfos_[i].inZone.clear();
     }
     return true;
 }
@@ -179,7 +178,7 @@ struct LineState::Impl {
 
 LineState::LineState(Size<int> imgsz) : State(imgsz), impl_(std::make_unique<Impl>()) {}
 
-LineState::~LineState() = default;
+LineState::~LineState() {}
 
 std::vector<std::string> LineState::summary() {
     std::vector<std::string> strInfos;
