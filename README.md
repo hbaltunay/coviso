@@ -1,4 +1,4 @@
-<p align="center"> <img src=".github/assets/banner.png" width="350" /> </p>
+<p align="center"> <img src=".github/assets/banner.png" width="400" /> </p>
 
 # COVISO
 Computer Vision Solutions
